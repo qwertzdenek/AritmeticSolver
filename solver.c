@@ -24,10 +24,75 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <stdbool.h>
+#include <string.h>
 
-int main(int argc, char **argv)
+#include "list.h"
+
+#define EPS 1e-6
+
+//~ double add(double x, double y)
+//~ {
+  //~ return x + y;
+//~ }
+//~ 
+//~ double sub(double x, double y)
+//~ {
+  //~ return x - y;
+//~ }
+//~ 
+//~ double mul(double x, double y)
+//~ {
+  //~ return x * y;
+//~ }
+//~ 
+//~ double dvs(double x, double y)
+//~ {
+  //~ if (fabs(y) < EPS) {
+    //~ printf("Div by 0\n");
+    //~ return 0;
+  //~ }
+//~ 
+  //~ return x / y;
+//~ }
+//~ 
+//~ double nop(double x, double y)
+//~ {
+  //~ return 0;
+//~ }
+
+bool equals(char *compared, char *to)
 {
-	printf("Hello world!\n")
-	return 0;
+    int len_compared = strlen(compared);
+    int len_to = strlen(compared);
+    int i;
+    
+    if (len_compared != len_to)
+        return false;
+    
+    for (i = 0; i < len_to; i++)
+    {
+        if (compared[i] != to[i])
+            return false;
+    }
+    return true;
 }
+
+int main(int argc, char *argv[])
+{
+  char l[256];
+  
+  printf(" > ");
+  fgets(l,255,stdin);
+  
+  if (equals(l, "quit"))
+  {
+      printf("By anyway!\n");
+  }
+  
+  return 0;
+}
+
+
 
