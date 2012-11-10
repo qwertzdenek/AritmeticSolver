@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -pedantic -ansi
+CFLAGS=-Wall -pedantic -std=c99
 LDFLAGS=-lm
 SOURCES=solver.c
 EXECUTABLE=solver
