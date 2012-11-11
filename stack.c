@@ -70,9 +70,7 @@ int isEmpty(stack *s)
 
 void free_stack(stack **s)
 {
-    int i;
-    
-    if (s == NULL) return;
+    if (s == NULL || *s == NULL) return;
     
     free((*s)->data);
     free(*s);

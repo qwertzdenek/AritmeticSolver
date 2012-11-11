@@ -34,71 +34,158 @@
 #define AT_OPERATOR 0
 #define AT_IDENT 1
 #define AT_VALUE 2
+#define AT_LIST 3
+
+#define OPSYM_ADD 10
+#define OPSYM_SUB 11 
+#define OPSYM_MUL 12
+#define OPSYM_DIV 13
 
 typedef struct {
     unsigned char type;
     char data[32];
 } atom;
 
-char *veta(char *s)
+stack *z = NULL;
+
+void die(const char *msg)
 {
-    char *tmp[50];
-    int pos = 0;
+    fprintf(stderr, "%s\n", msg);
+    exit(1);
+}
+
+void cleanup()
+{
+    free_stack(&z);
+}
+
+void veta(char *s)
+{
+    // TODO: ošetřit prázdný nebo triviální vstup.
+    atom sym;
+    int len = strlen(s) - 1;
     int i = 0;
-    
-    while (s[pos])
+    int j = 0;
+    int k = 0;
+    while (i < len)
     {
-        switch (s[pos]) {
-        case '+':
-            printf("plus\n");
-            break;
-        case '*':
-            printf("krát\n");
-            break;
-        case ' ':
-            continue;
-        default:
-            i = pos;
-            while (s[i++] != ' ')
-                ;
-            memcpy(tmp, s+pos, i - pos);
-            printf("našel jsem token: %s\n",*tmp);
-            i = pos;
+//        printf("  l[%d]=%d\n", i, l[i]);
+        if (s[i] == '(')
+        {
+            j = 1;
+            k = i + 1;
+            while (j > 0 && k < len)
+            {
+                if (s[k] == ')') j--;
+                k++;
+            }
+            printf("k=%d j=%d",k,j);
+            if (j == 0)
+            {
+                sym.type = AT_LIST;
+                // přidej do sym.data podřetězec
+              //  push(z, (void *) &sym);
+            }
+            else
+            {
+                die("chybné ozávorkování");
+            }
+            j = 0;
         }
-        pos++;
+        else if ((s[i] >= '0') && (s[i] <= '9'))
+        {
+            sym.type = AT_VALUE;
+            sym.data[j] = s[i];
+            j++;
+        }
+        else if (s[i] == ' ') {
+            if (j > 0) {
+                sym.data[j] = 0;
+                
+                j = atoi(sym.data);
+                memcpy(sym.data, &j, sizeof(int));
+                push(z, (void *) &sym);
+                j = 0;
+            }
+        }
+        else
+        {
+            switch (s[i]) {
+                case '+':
+                    *sym.data = OPSYM_ADD;
+                    break;
+                case '-':
+                    *sym.data = OPSYM_SUB;
+                    break;
+                case '*':
+                    *sym.data = OPSYM_MUL;
+                    break;
+                case '/':
+                    *sym.data = OPSYM_DIV;
+                    break;
+                default:
+                    i++;
+                    continue;
+            }
+            sym.type = AT_OPERATOR;
+            push(z, (void *) &sym);
+        }
+        
+        i++;
     }
     
-    return "nic";
+    if (j > 0)
+    {
+        sym.data[j] = 0;
+                
+        j = atoi(sym.data);
+        memcpy(sym.data, &j, sizeof(int));
+        push(z, (void *) &sym);
+        j = 0;
+    }
+    return;
 }
 
-double add(double x, double y)
+void arr(stack *s, atom *opsym, int *rval)
 {
-  return x + y;
-}
-
-double sub(double x, double y)
-{
-  return x - y;
-}
-
-double mul(double x, double y)
-{
-  return x * y;
-}
-
-double dvs(double x, double y)
-{
-  if (fabs(y) < EPS) {
-    printf("Div by 0\n");
-    return 0;
-  }
-
-  return x / y;
-}
-
-double nop(double x, double y)
-{
-  return 0;
+    atom sym;
+    int res = 0;
+    
+    if (!pop(s, &sym))
+        die("Stack underflow at arr");
+    
+    if (sym.type == AT_OPERATOR)
+    {
+        memcpy(opsym, &sym, sizeof(atom));
+        *rval = -1;
+        return;
+    }
+    
+    arr(s, opsym, &res);
+    
+    if (res == -1)
+    {
+        *rval = *((int *)sym.data);
+        return;
+    }
+    
+    switch (opsym->data[0])
+    {
+        case OPSYM_ADD:
+            *rval = res + *((int *)sym.data);
+            break;
+        case OPSYM_SUB:
+            *rval = res - *((int *)sym.data);
+            break;
+        case OPSYM_MUL:
+            *rval = res * *((int *)sym.data);
+            break;
+        case OPSYM_DIV:
+            *rval = res / *((int *)sym.data);
+            break;
+        default:
+            die("invalid operator");
+    }
 }
 
 bool equals(char *compared, char *to)
@@ -118,94 +205,25 @@ bool equals(char *compared, char *to)
     return true;
 }
 
-void list_atom(char *s, int start, char *p)
-{
-    int endPos = 0;
-    
-    while (s[endPos++] != ')')
-        ;
-    
-    memcpy(p, s+start, endPos-2);
-    p[endPos-2] = 0;
-}
-
-int token_len(char *s, int start)
-{
-    int i = start;
-    while (s[i++] != '\n')
-        ;
-    
-    return i-start;
-}
-
 int main(int argc, char *argv[])
 {
     char l[50];
-    char rl[50];
-    int i = 0;
-    int j = 0;
-    int len = 0;
-    int res = 0;
-    atom sym;
-    stack *z = createstack(50, sizeof(atom));
+    char data[50];
+    int res;
+    atom opsym;
+    
+    z = createstack(50, sizeof(atom));
+    
+    atexit(&cleanup);
     
     printf(" > ");
     fgets(l, 50, stdin);
     
-    len = strlen(l) - 1;
-    // reverze vstupu
-    for (i = len - 1; i >= 0; i--)
-        rl[j++] = l[i];
-    rl[len] = 0;
+    veta(l);
+//    arr(z, &opsym, &res);
     
-    i = 0;
-    j = 0;
-    while (i < len)
-    {
-        printf("  rl[%d]=%d\n", i, rl[i]);
-        if ((rl[i] >= '0') && (rl[i] <= '9'))
-        {
-            sym.type = AT_VALUE;
-            sym.data[j] = rl[i];
-            j++;
-        }
-        else if ((rl[i] == '+'))
-        {
-            sym.type = AT_OPERATOR;
-            *sym.data = '+';
-            push(z, (void *) &sym);
-        }
-        else if (rl[i] == ' ') {
-            if (j > 0) {
-                sym.data[j] = 0;
-                push(z, (void *) &sym);
-                j = 0;
-                printf("push číslo: %s\n", sym.data);
-            }
-        }
-        
-        i++;
-    }
-    
-    if (j > 0)
-    {
-        sym.data[j] = 0;
-        push(z, (void *) &sym);
-        j = 0;
-        printf("push číslo: %s\n", sym.data);
-    }
-    
-//    sym.type = AT_IDENT;
-//    strcpy(sym.data, r);
-    
-    while (!isEmpty(z))
-    {
-        pop(z, (void *) &sym);
-        if (sym.type =! AT_OPERATOR)
-            res += atoi(sym.data);
-    }
-    
-    printf(" res=%d\n",res);
+    pop(z, (void *) data);
+    printf(" res=%s\n",data);
     free_stack(&z);
     return 0;
 }
