@@ -34,7 +34,6 @@
 #define AT_OPERATOR 0
 #define AT_IDENT 1
 #define AT_VALUE 2
-#define AT_LIST 3
 
 #define OPSYM_ADD 10
 #define OPSYM_SUB 11 
@@ -47,6 +46,7 @@ typedef struct {
 } atom;
 
 stack *z = NULL;
+int acti = 0;
 
 void die(const char *msg)
 {
@@ -59,11 +59,19 @@ void cleanup()
     free_stack(&z);
 }
 
-void veta(char *s)
+bool isOperator(char o)
+{
+    if (o == '+' || o == '*' || o == '-' || o == '/')
+        return true;
+    else
+        return false;
+}
+
+char *lex(char *s)
 {
     // TODO: ošetřit prázdný nebo triviální vstup.
     atom sym;
-    int len = strlen(s) - 1;
+    int len = strlen(s);
     int i = 0;
     int j = 0;
     int k = 0;
@@ -77,20 +85,26 @@ void veta(char *s)
             while (j > 0 && k < len)
             {
                 if (s[k] == ')') j--;
+                if (s[k] == '(') j++;
+                printf("k=%d j=%d\n",k,j);
                 k++;
             }
-            printf("k=%d j=%d",k,j);
+            
             if (j == 0)
             {
                 sym.type = AT_LIST;
                 // přidej do sym.data podřetězec
-              //  push(z, (void *) &sym);
+                strncpy(sym.data, s + i + 1, k - i - 3);
+                sym.data[k - i - 2] = 0;
+                printf(" res=%s\n",sym.data);
+                push(z, (void *) &sym);
             }
             else
             {
                 die("chybné ozávorkování");
             }
             j = 0;
+            i = k;
         }
         else if ((s[i] >= '0') && (s[i] <= '9'))
         {
@@ -146,7 +160,17 @@ void veta(char *s)
     return;
 }
 
-void arr(stack *s, atom *opsym, int *rval)
+void retez()
+{
+    
+}
+
+char *kompta()
+{
+    
+}
+
+void vyraz(stack *s, atom *opsym, int *rval)
 {
     atom sym;
     int res = 0;
@@ -186,6 +210,14 @@ void arr(stack *s, atom *opsym, int *rval)
         default:
             die("invalid operator");
     }
+}
+
+char *start(char *s)
+{
+    if (isOperator(*s))
+        vyraz();
+    else
+        kompta();
 }
 
 bool equals(char *compared, char *to)
