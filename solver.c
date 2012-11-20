@@ -45,8 +45,7 @@ typedef struct {
     char data[32];
 } atom;
 
-stack *z = NULL;
-int acti = 0;
+
 
 void die(const char *msg)
 {
@@ -67,14 +66,16 @@ bool isOperator(char o)
         return false;
 }
 
-char *lex(char *s)
+/*
+char *lex(char *s, int pos)
 {
     // TODO: ošetřit prázdný nebo triviální vstup.
     atom sym;
     int len = strlen(s);
-    int i = 0;
+    int i = pos;
     int j = 0;
     int k = 0;
+    
     while (i < len)
     {
 //        printf("  l[%d]=%d\n", i, l[i]);
@@ -86,18 +87,13 @@ char *lex(char *s)
             {
                 if (s[k] == ')') j--;
                 if (s[k] == '(') j++;
-                printf("k=%d j=%d\n",k,j);
                 k++;
             }
             
             if (j == 0)
             {
-                sym.type = AT_LIST;
                 // přidej do sym.data podřetězec
-                strncpy(sym.data, s + i + 1, k - i - 3);
-                sym.data[k - i - 2] = 0;
-                printf(" res=%s\n",sym.data);
-                push(z, (void *) &sym);
+                printf("start=%d stop=%d\n",i + 1, k - i - 2);
             }
             else
             {
@@ -138,6 +134,10 @@ char *lex(char *s)
                     *sym.data = OPSYM_DIV;
                     break;
                 default:
+					sym.type = AT_IDENT;
+					sym.data[0] = s[i];
+					
+					push(z, (void *) &sym);
                     i++;
                     continue;
             }
@@ -157,9 +157,10 @@ char *lex(char *s)
         push(z, (void *) &sym);
         j = 0;
     }
-    return;
+    return "lex done";
 }
-
+*/
+/*
 void retez()
 {
     
@@ -169,6 +170,7 @@ char *kompta()
 {
     
 }
+*/
 
 void vyraz(stack *s, atom *opsym, int *rval)
 {
@@ -185,7 +187,7 @@ void vyraz(stack *s, atom *opsym, int *rval)
         return;
     }
     
-    arr(s, opsym, &res);
+    vyraz(s, opsym, &res);
     
     if (res == -1)
     {
@@ -212,6 +214,7 @@ void vyraz(stack *s, atom *opsym, int *rval)
     }
 }
 
+/*
 char *start(char *s)
 {
     if (isOperator(*s))
@@ -219,6 +222,7 @@ char *start(char *s)
     else
         kompta();
 }
+*/
 
 bool equals(char *compared, char *to)
 {
@@ -240,23 +244,23 @@ bool equals(char *compared, char *to)
 int main(int argc, char *argv[])
 {
     char l[50];
-    char data[50];
-    int res;
-    atom opsym;
-    
-    z = createstack(50, sizeof(atom));
-    
+
     atexit(&cleanup);
     
     printf(" > ");
     fgets(l, 50, stdin);
     
-    veta(l);
-//    arr(z, &opsym, &res);
+    lex(l, 0);
+//    vyraz(z, &opsym, &res);
     
-    pop(z, (void *) data);
-    printf(" res=%s\n",data);
+    while (!isEmpty(z))
+    {
+		pop(z, data);
+		printf("pop: %d\n", (int) *data);
+	}
+    
     free_stack(&z);
+    
     return 0;
 }
 

@@ -1,0 +1,44 @@
+
+static char *ptr = NULL;
+static atom csym;
+
+void lexa_init(char *strin)
+{
+    assert(strin);
+    ptr = strin;
+    memset(csym, 0, sizeof(atom));
+}
+
+void lexa_get(atom *sym)
+{
+    assert(sym);
+    memcpy(sym, csym, sizeof(atom));
+}
+
+bool lexa_next(atom *sym)
+{
+    char buf[STR_LEN];
+    char *p_buf = &buf[0];
+    //char *endptr;
+    
+    if (sym == NULL)
+        return true;
+    
+    while (*ptr != ' ')
+        *p_buf++ = *ptr++;
+    *p_buf = 0;
+    
+    csym.type = classfy(buf);
+    switch (csym.type)
+    {
+        case TYPE_IDENT:
+            strcpy(csym.data, buf);
+            break;
+        case TYPE_NUnMBER:
+            int cislo = strtol(buf, NULL);
+            memcpy(csym.data, &cislo, sizeof(int));
+            break;
+        ...
+    }
+}
+
