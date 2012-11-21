@@ -1,7 +1,7 @@
 /*
  * solver.c
  * 
- * Copyright 2012 Zdeněk Janeček <zdenda@lhota4>
+ * Copyright 2012 Zdeněk Janeček <jan.zdenek@gmail.com>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,243 +25,110 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <math.h>
 #include <string.h>
 
-#include "stack.h"
+#include "lexa.h"
 
 #define EPS 1e-6
-#define AT_OPERATOR 0
-#define AT_IDENT 1
-#define AT_VALUE 2
 
 #define OPSYM_ADD 10
 #define OPSYM_SUB 11 
 #define OPSYM_MUL 12
 #define OPSYM_DIV 13
 
-typedef struct {
-    unsigned char type;
-    char data[32];
-} atom;
-
-
-
 void die(const char *msg)
 {
-    fprintf(stderr, "%s\n", msg);
-    exit(1);
-}
-
-void cleanup()
-{
-    free_stack(&z);
-}
-
-bool isOperator(char o)
-{
-    if (o == '+' || o == '*' || o == '-' || o == '/')
-        return true;
-    else
-        return false;
+  fprintf(stderr, "%s\n", msg);
+  exit(EXIT_FAILURE);
 }
 
 /*
-char *lex(char *s, int pos)
-{
-    // TODO: ošetřit prázdný nebo triviální vstup.
-    atom sym;
-    int len = strlen(s);
-    int i = pos;
-    int j = 0;
-    int k = 0;
-    
-    while (i < len)
-    {
-//        printf("  l[%d]=%d\n", i, l[i]);
-        if (s[i] == '(')
-        {
-            j = 1;
-            k = i + 1;
-            while (j > 0 && k < len)
-            {
-                if (s[k] == ')') j--;
-                if (s[k] == '(') j++;
-                k++;
-            }
-            
-            if (j == 0)
-            {
-                // přidej do sym.data podřetězec
-                printf("start=%d stop=%d\n",i + 1, k - i - 2);
-            }
-            else
-            {
-                die("chybné ozávorkování");
-            }
-            j = 0;
-            i = k;
-        }
-        else if ((s[i] >= '0') && (s[i] <= '9'))
-        {
-            sym.type = AT_VALUE;
-            sym.data[j] = s[i];
-            j++;
-        }
-        else if (s[i] == ' ') {
-            if (j > 0) {
-                sym.data[j] = 0;
-                
-                j = atoi(sym.data);
-                memcpy(sym.data, &j, sizeof(int));
-                push(z, (void *) &sym);
-                j = 0;
-            }
-        }
-        else
-        {
-            switch (s[i]) {
-                case '+':
-                    *sym.data = OPSYM_ADD;
-                    break;
-                case '-':
-                    *sym.data = OPSYM_SUB;
-                    break;
-                case '*':
-                    *sym.data = OPSYM_MUL;
-                    break;
-                case '/':
-                    *sym.data = OPSYM_DIV;
-                    break;
-                default:
-					sym.type = AT_IDENT;
-					sym.data[0] = s[i];
-					
-					push(z, (void *) &sym);
-                    i++;
-                    continue;
-            }
-            sym.type = AT_OPERATOR;
-            push(z, (void *) &sym);
-        }
-        
-        i++;
-    }
-    
-    if (j > 0)
-    {
-        sym.data[j] = 0;
-                
-        j = atoi(sym.data);
-        memcpy(sym.data, &j, sizeof(int));
-        push(z, (void *) &sym);
-        j = 0;
-    }
-    return "lex done";
-}
-*/
-/*
-void retez()
-{
-    
-}
-
-char *kompta()
-{
-    
-}
-*/
-
 void vyraz(stack *s, atom *opsym, int *rval)
 {
-    atom sym;
-    int res = 0;
+  atom sym;
+  int res = 0;
     
-    if (!pop(s, &sym))
-        die("Stack underflow at arr");
+  if (!pop(s, &sym))
+    die("Stack underflow at arr");
     
-    if (sym.type == AT_OPERATOR)
+  if (sym.type == AT_OPERATOR)
     {
-        memcpy(opsym, &sym, sizeof(atom));
-        *rval = -1;
-        return;
+      memcpy(opsym, &sym, sizeof(atom));
+      *rval = -1;
+      return;
     }
     
-    vyraz(s, opsym, &res);
-    
-    if (res == -1)
+  vyraz(s, opsym, &res);   
+  if (res == -1)
     {
-        *rval = *((int *)sym.data);
-        return;
+      *rval = *((int *)sym.data);
+      return;
     }
     
-    switch (opsym->data[0])
+  switch (opsym->data[0])
     {
-        case OPSYM_ADD:
-            *rval = res + *((int *)sym.data);
-            break;
-        case OPSYM_SUB:
-            *rval = res - *((int *)sym.data);
-            break;
-        case OPSYM_MUL:
-            *rval = res * *((int *)sym.data);
-            break;
-        case OPSYM_DIV:
-            *rval = res / *((int *)sym.data);
-            break;
-        default:
-            die("invalid operator");
+    case OPSYM_ADD:
+      *rval = res + *((int *)sym.data);
+      break;
+    case OPSYM_SUB:
+      *rval = res - *((int *)sym.data);
+      break;
+    case OPSYM_MUL:
+      *rval = res * *((int *)sym.data);
+      break;
+    case OPSYM_DIV:
+      *rval = res / *((int *)sym.data);
+      break;
+    default:
+      die("invalid operator");
     }
-}
-
-/*
-char *start(char *s)
-{
-    if (isOperator(*s))
-        vyraz();
-    else
-        kompta();
 }
 */
 
 bool equals(char *compared, char *to)
 {
-    int len_compared = strlen(compared);
-    int len_to = strlen(compared);
-    int i;
+  int len_compared = strlen(compared);
+  int len_to = strlen(compared);
+  int i;
     
-    if (len_compared != len_to)
-        return false;
+  if (len_compared != len_to)
+    return false;
     
-    for (i = 0; i < len_to; i++)
+  for (i = 0; i < len_to; i++)
     {
-        if (compared[i] != to[i])
-            return false;
+      if (compared[i] != to[i])
+	return false;
     }
-    return true;
+  return true;
 }
 
 int main(int argc, char *argv[])
 {
-    char l[50];
-
-    atexit(&cleanup);
+  char l[50];
+  atom sym;
     
-    printf(" > ");
-    fgets(l, 50, stdin);
+  printf(" > ");
+  fgets(l, 50, stdin);
     
-    lex(l, 0);
-//    vyraz(z, &opsym, &res);
-    
-    while (!isEmpty(z))
+  lexa_init(l);
+  while (lexa_next(&sym))
     {
-		pop(z, data);
-		printf("pop: %d\n", (int) *data);
+      switch (sym.type)
+	{
+	case AT_VALUE:
+	  printf("číslo %d\n", *((int *) sym.data));
+	  break;
+	case AT_IDENT:
+	  printf("ident %s\n", sym.data);
+	  break;
+	case AT_OPERATOR:
+	  printf("operator %c\n", (char) sym.data[0]);
+	  break;
+	default:
+	  printf("nevím\n");
+	  break;
 	}
-    
-    free_stack(&z);
-    
-    return 0;
+    }
+  return EXIT_SUCCESS;
 }
-
 
