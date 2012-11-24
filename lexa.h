@@ -1,6 +1,8 @@
 #ifndef _LEX_H_
 #define _LEX_H_
 
+#include <stdbool.h>
+
 #define AT_UNKNOWN 0
 #define AT_OPERATOR 1
 #define AT_IDENT 2

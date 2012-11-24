@@ -1,6 +1,5 @@
 #include <ctype.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 
@@ -64,8 +63,8 @@ bool lexa_next(atom *sym)
       while (isalpha(*ptr))
 	ptr++;
       csym.type = AT_IDENT;
-      memcpy(csym.data, tptr, ptr - tptr + 1);
-      *(csym.data + (ptr - tptr + 1)) = 0;
+      memcpy(csym.data, tptr, ptr - tptr);
+      *(csym.data + (ptr - tptr)) = 0;
     }
   else if (is_operator(*ptr))
     {

@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -pedantic -std=c99 -g
 LDFLAGS=-lm
-SOURCES=solver.c lexa.c
+SOURCES=solver.c lexa.c synta.c tools.c
 EXECUTABLE=solver
 
 all:
