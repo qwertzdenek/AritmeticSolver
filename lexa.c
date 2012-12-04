@@ -10,7 +10,7 @@ static atom csym;
 
 bool is_operator(char o)
 {
-  if (o == '+' || o == '*' || o == '-' || o == '/')
+  if (o == '+' || o == '*' || o == '-' || o == '/' || o == '=')
     return true;
   else
     return false;
@@ -68,8 +68,12 @@ bool lexa_next(atom *sym)
     }
   else if (is_operator(*ptr))
     {
+      tptr = ptr;
+      while (is_operator(*ptr))
+	ptr++;
       csym.type = AT_OPERATOR;
-      *csym.data = *ptr++;
+      memcpy(csym.data, tptr, ptr - tptr);
+      *(csym.data + (ptr - tptr)) = 0;
     }
 
   if (sym != NULL)
