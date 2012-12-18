@@ -38,14 +38,27 @@
 int main(int argc, char *argv[])
 {
   char l[50];
-  //  atom sym;
-    
-  printf(" > ");
-  fgets(l, 50, stdin);
-    
-  lexa_init(l);
+  // atom sym;
+  int dalsi = 0;
 
-  start();
+  do {
+    printf(" > ");
+    fgets(l, 50, stdin);
+    
+    lexa_init(l);
+
+    dalsi = start();
+  } while (dalsi > 0);
+
+  /*
+  while (lexa_next(&sym))
+    {
+      printf("type %d\n",sym.type);
+
+      if (sym.type == AT_OPERATOR)
+	printf("  %s\n",sym.data);
+    }
+  */
 
   return EXIT_SUCCESS;
 }

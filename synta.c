@@ -9,8 +9,12 @@
 #define BOOL 0
 #define UNKN -1
 
-int komp();
-int vyraz();
+char *quit = "32766";
+char *nil = "NIL";
+char *t = "T";
+
+void komp(char *res);
+void vyraz(char *out);
 
 int addii(int a, int b)
 {
@@ -42,34 +46,46 @@ int comp(int a, int b)
   return a == b;
 }
 
-int komp()
+void komp(char *res)
 {
   atom act;
-  int res;
 
   lexa_get(&act);
 
   if (act.type == AT_VALUE)
     {
-      memcpy(&res, &act.data, sizeof(int));
-    }
+      sprintf(res, "%d", *((int *) act.data));
+    } 
   else if (act.type == AT_LBRACKET)
     {
-      lexa_next(NULL);
-      res = vyraz();
-    }
-  else
-    res = 0;
+      lexa_next(&act);
+      switch (act.type)
+	{
+	case (AT_OPERATOR):
+	  vyraz(res);
+	  break;
 
-  return res;
+	case (AT_VALUE):
+	case (AT_IDENT):
+	  komp(res);
+	  break;
+	}
+    }
+  else if (act.type == AT_IDENT)
+    {
+      if (equals(act.data, "quit"))
+	res = quit;
+    }
 }
 
-int vyraz()
+void vyraz(char *out)
 {
   atom act;
   int res;
+  bool bres;
   int (*op)(int, int);
   int type = UNKN;
+  char buf[20];
   
   lexa_get(&act);
 
@@ -97,7 +113,10 @@ int vyraz()
 	lexa_next(&act);
 	if (act.type == AT_VALUE || act.type == AT_IDENT
             || act.type == AT_LBRACKET)
-	  res = komp();
+	  {
+	    komp(buf);
+	    res = strtol(buf, NULL, 10);
+	  }
 	else
 	  die("Nelze dělit");
       } else if (act.data[1] == '=') {
@@ -105,7 +124,21 @@ int vyraz()
 	type = BOOL;
 	lexa_next(&act);
 	if (act.type == AT_VALUE || act.type == AT_IDENT)
-	  res = komp();
+	  {
+	    bres = false;
+	    komp(buf);
+	    res = strtol(buf, NULL, 10);
+	  }
+      case '=':
+	op = comp;
+	type = BOOL;
+	lexa_next(&act);
+	if (act.type == AT_VALUE || act.type == AT_IDENT)
+	  {
+	    bres = false;
+	    komp(buf);
+	    res = strtol(buf, NULL, 10);
+	  }
       }
     }
 
@@ -114,29 +147,50 @@ int vyraz()
 	 || act.type == AT_LBRACKET)
     {
       if (type == ARIT)
-	res = op(res, komp());
+	{
+	  komp(buf);
+	  res = op(res, strtol(buf, NULL, 10));
+	}
       else if (type == BOOL)
-	res |= op(res, komp());
-    if (!lexa_next(&act))
-      break;
+	{
+	  komp(buf);
+	  bres |= op(res, strtol(buf, NULL, 10));
+	}
+      if (!lexa_next(&act))
+	break;
     }
-  return res;
+
+  if (type == ARIT)
+    {
+      sprintf(out, "%d", res);
+    }
+  else
+    {
+      strcpy(out, bres ? t : nil);
+    }
 }
 
-void start()
+int start()
 {
   atom act;
-
+  char res[20];
+  
   lexa_next(&act);
-
   switch (act.type)
     {
     case AT_OPERATOR:
-      printf("%d\n",vyraz());
+      vyraz(res);
+      printf("%s\n",res);
       break;
+     
     default:
-      printf("%d\n",komp());
-
-    break;
-  }
+      komp(res);
+      if (equals(res, quit))
+	{
+	  return 0;
+	}
+      printf("%s\n",res);
+      break;
+    }
+  return 1;
 }
