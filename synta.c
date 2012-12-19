@@ -4,6 +4,7 @@
 
 #include "lexa.h"
 #include "tools.h"
+#include "list.h"
 
 #define ARIT 1
 #define BOOL 0
@@ -46,9 +47,23 @@ int comp(int a, int b)
   return a == b;
 }
 
+int small(int a, int b)
+{
+  return a < b;
+}
+
+int big(int a, int b)
+{
+  return a > b;
+}
+
 void komp(char *res)
 {
   atom act;
+  int var_v;
+  char *var_n = NULL;
+  int i;
+  bool found;
 
   lexa_get(&act);
 
@@ -73,8 +88,25 @@ void komp(char *res)
     }
   else if (act.type == AT_IDENT)
     {
-      if (equals(act.data, "quit"))
+      if (equals(act.data, "QUIT"))
 	res = quit;
+      else
+	{
+	  begin();
+	  found = false;
+	  for (i = 0; i < count(); i++)
+	    {
+	      next(&var_v, &var_n);
+	      if (equals(var_n, act.data))
+		{
+		  sprintf(res, "%d", var_v);
+		  found = true;
+		  break;
+		}
+	    }
+	  if (!found)
+	    die("Proměnná nenalezena");
+	}
     }
 }
 
@@ -82,7 +114,7 @@ void vyraz(char *out)
 {
   atom act;
   int res;
-  bool bres;
+  bool bres = true;
   int (*op)(int, int);
   int type = UNKN;
   char buf[20];
@@ -122,24 +154,32 @@ void vyraz(char *out)
       } else if (act.data[1] == '=') {
 	op = ncomp;
 	type = BOOL;
-	lexa_next(&act);
-	if (act.type == AT_VALUE || act.type == AT_IDENT)
-	  {
-	    bres = false;
-	    komp(buf);
-	    res = strtol(buf, NULL, 10);
-	  }
+	break;
       case '=':
 	op = comp;
 	type = BOOL;
-	lexa_next(&act);
-	if (act.type == AT_VALUE || act.type == AT_IDENT)
-	  {
-	    bres = false;
-	    komp(buf);
-	    res = strtol(buf, NULL, 10);
-	  }
+      case '<':
+	op = small;
+	type = BOOL;
+	break;
+      case '>':
+	op = big;
+	type = BOOL;
+	break;
       }
+    }
+
+  // inicializace
+  if (type == BOOL)
+    {
+      lexa_next(&act);
+      if (act.type == AT_VALUE || act.type == AT_IDENT)
+	{
+	  komp(buf);
+	  res = strtol(buf, NULL, 10);
+	}
+      else
+	die("Neplatný výraz");
     }
 
   lexa_next(&act);
@@ -154,7 +194,7 @@ void vyraz(char *out)
       else if (type == BOOL)
 	{
 	  komp(buf);
-	  bres |= op(res, strtol(buf, NULL, 10));
+	  bres &= op(res, strtol(buf, NULL, 10));
 	}
       if (!lexa_next(&act))
 	break;
@@ -175,6 +215,12 @@ int start()
   atom act;
   char res[20];
   
+  push(2, "A");
+  push(5, "B");
+  push(7, "C");
+  push(8, "D");
+  push(10, "BETA");
+
   lexa_next(&act);
   switch (act.type)
     {

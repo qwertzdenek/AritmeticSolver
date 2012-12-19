@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <assert.h>
+
+#include "list.h"
 
 typedef struct Node_t
 {
-    char *name;
-    int value;
-    struct Node_t *next;
+  char *name;
+  int value;
+  struct Node_t *next;
 } node_t;
 
 int n = 0;
@@ -73,10 +74,8 @@ void begin()
 
 bool next(int *p_value, char **p_name)
 {
-    bool first = false;
     if (current == NULL)
     {
-        first = true;
         current = top;
         if (current == NULL)
             return false;
@@ -85,16 +84,23 @@ bool next(int *p_value, char **p_name)
     if (p_value != NULL) *p_value = current->value;
     if (p_name != NULL) *p_name = current->name;
     
-    if (!first)
-    {
-        current = current->next;
-        if (current == NULL)
-            return false;
-    }
-    
+    current = current->next;
+
+    if (current == NULL)
+      return false;  
+
     return true;
 }
 
+void cleanup()
+{
+  if (n == 0)
+    return;
+
+  while (n > 0)
+    pop(NULL, NULL);
+}
+/*
 int main(int argc, char *argv[])
 {
     int value;
@@ -123,3 +129,4 @@ int main(int argc, char *argv[])
     
     return 0;
 }
+*/

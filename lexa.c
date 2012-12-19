@@ -3,6 +3,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include "list.h"
 #include "lexa.h"
 
 static char *ptr = NULL;
@@ -10,7 +11,8 @@ static atom csym;
 
 bool is_operator(char o)
 {
-  if (o == '+' || o == '*' || o == '-' || o == '/' || o == '=')
+  if (o == '+' || o == '*' || o == '-' || o == '/' || o == '=' ||
+      o == '<' || o == '>')
     return true;
   else
     return false;
@@ -32,6 +34,8 @@ void lexa_get(atom *sym)
 bool lexa_next(atom *sym)
 {
   int ival;
+  char c;
+  int i;
   
   char *tptr;
     
@@ -65,6 +69,15 @@ bool lexa_next(atom *sym)
       csym.type = AT_IDENT;
       memcpy(csym.data, tptr, ptr - tptr);
       *(csym.data + (ptr - tptr)) = 0;
+
+      // convert to Uppercase
+      i = 0;
+      while (csym.data[i])
+	{
+	  c = csym.data[i];
+	  csym.data[i] = toupper(c);
+	  i++;
+	}
     }
   else if (is_operator(*ptr))
     {

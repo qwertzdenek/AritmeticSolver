@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "lexa.h"
 #include "synta.h"
@@ -35,19 +36,33 @@
 #define OPSYM_MUL 12
 #define OPSYM_DIV 13
 
+char *trim(char *ptr)
+{
+  while(isspace(*ptr++))
+    ;
+
+  return ptr;
+}
+
 int main(int argc, char *argv[])
 {
-  char l[50];
+  char l[100];
   // atom sym;
-  int dalsi = 0;
+  int dalsi = 1;
+  char *sptr;
 
   do {
     printf(" > ");
-    fgets(l, 50, stdin);
+    fgets(l, 100, stdin);
     
-    lexa_init(l);
+    sptr = trim(l);
+    
+    if (*sptr != '0')
+      {
+	lexa_init(l);
 
-    dalsi = start();
+	dalsi = start();
+      }
   } while (dalsi > 0);
 
   /*
