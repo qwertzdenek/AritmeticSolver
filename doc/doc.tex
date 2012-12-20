@@ -1,0 +1,38 @@
+\documentclass{article}
+
+\usepackage{czech}
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+
+\begin{document}
+\begin{titlepage}
+\includegraphics[width=30ex]{fav_cmyk}
+\vfill
+\begin{center}
+{\huge Programování v jazyce C}\\[2ex]
+{\Large Interpret podmnožiny jazyka LISP}
+\end{center}
+\vfill
+\begin{tabbing}
+Vypracoval: \hspace{1ex}\=Zdeněk Janeček\kill
+Vypracoval: \>Zdeněk \textsc{Janeček}\\
+Datum:\> \today
+\end{tabbing}
+\end{titlepage}
+
+\section{Problematika}
+Každý programovací popisujeme gramatikou jako každý jíný jazyk.
+Prefixový zápis celou věc zjednodušuje, narozdíl od běžného přístupu.
+LISP nám už v historii ukázal že lze programovat lehce jinak.  Totiž,
+že vše je seznamem.
+
+\begin{figure}
+START $\longrightarrow$ VÝRAZ $|$ KOMP\\
+VYRAZ  $\longrightarrow$ $\pm$ KOMP RETEZ\\
+KOMP  $\longrightarrow$ č $|$ IDENT $|$ (VYRAZ) $|$ (KOMP)\\
+RETEZ  $\longrightarrow$ KOMP RETEZ $|$ KOMP\\
+IDENT  $\longrightarrow$ QUOTE $|$ quit $|$ set $|$ car $|$ *\\
+QUOTE  $\longrightarrow$ č $|$ ř $|$ op $|$ z
+\end{figure}
+
+\end{document}
