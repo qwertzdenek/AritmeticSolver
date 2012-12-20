@@ -7,7 +7,7 @@
 typedef struct Node_t
 {
   char *name;
-  int value;
+  int *value;
   struct Node_t *next;
 } node_t;
 
@@ -25,7 +25,7 @@ bool isEmpty()
     return top == NULL;
 }
 
-void push(int value, char *name)
+void push(int *value, char *name)
 {
     assert(name);
     
@@ -48,7 +48,7 @@ void push(int value, char *name)
     n++;
 }
 
-bool pop(int *p_value, char **p_name)
+bool pop(int **p_value, char **p_name)
 {
     node_t *tmp;
     
@@ -61,7 +61,9 @@ bool pop(int *p_value, char **p_name)
     tmp = top;
     top = tmp->next;
     n--;
-    
+
+    free(tmp->value);
+    free(tmp->name);
     free(tmp);
     
     return true;
@@ -72,7 +74,7 @@ void begin()
     current = top;
 }
 
-bool next(int *p_value, char **p_name)
+bool next(int **p_value, char **p_name)
 {
     if (current == NULL)
     {
@@ -94,12 +96,10 @@ bool next(int *p_value, char **p_name)
 
 void cleanup()
 {
-  if (n == 0)
-    return;
-
   while (n > 0)
     pop(NULL, NULL);
 }
+
 /*
 int main(int argc, char *argv[])
 {

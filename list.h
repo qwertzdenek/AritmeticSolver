@@ -5,10 +5,10 @@
 
 int count();
 bool isEmpty();
-void push(int value, char *name);
-bool pop(int *p_value, char **p_name);
+void push(int *value, char *name);
+bool pop(int **p_value, char **p_name);
 void begin();
-bool next(int *p_value, char **p_name);
+bool next(int **p_value, char **p_name);
 void cleanup();
 
 #endif
