@@ -10,12 +10,68 @@
 #define BOOL 0
 #define UNKN -1
 
-char *quit = "32766";
 char *nil = "NIL";
 char *t = "T";
 
 void komp(char *res);
 void vyraz(char *out);
+
+char *quote(char *res)
+{
+  atom csym;
+  int len = 0;
+  
+  lexa_get(&csym);
+  while (csym.type == AT_VALUE || csym.type == AT_IDENT
+	 || csym.type == AT_LBRACKET || csym.type == AT_RBRACKET
+	 || csym.type == AT_OPERATOR)
+    {
+      if (csym.type == AT_LBRACKET)
+	{
+	  *res = *csym.data;
+	  res++;
+	  lexa_next(NULL);
+	  res = quote(res);
+	}
+      else if (csym.type == AT_RBRACKET)
+	{
+	  // TODO: need fix (quote (+ a 22))
+	  *res = *csym.data;
+     	  res++;
+	  break;
+	}
+
+      switch (csym.type)
+	{
+	case AT_OPERATOR:
+	  len = strlen(csym.data);
+	  memcpy(res, csym.data, len);
+	  res += len;
+	  break;
+	case AT_IDENT:
+	  *res++ = ' ';
+	  len = strlen(csym.data);
+	  memcpy(res, csym.data, len);
+	  res += len;
+	  break;
+	case AT_VALUE:
+	  *res++ = ' ';
+	  res += sprintf(res, "%d", *((int *) csym.data));
+	  break;
+	}
+      if (!lexa_next(&csym))
+	break;
+    }
+
+  return res;
+}
+
+void squote(char *res)
+{
+  lexa_next(NULL);
+  res = quote(res);
+  *res = 0;
+}
 
 int addii(int a, int b)
 {
@@ -57,6 +113,16 @@ int big(int a, int b)
   return a > b;
 }
 
+int smalleq(int a, int b)
+{
+  return a <= b;
+}
+
+int bigeq(int a, int b)
+{
+  return a >= b;
+}
+
 void komp(char *res)
 {
   atom act;
@@ -82,14 +148,16 @@ void komp(char *res)
 
 	case (AT_VALUE):
 	case (AT_IDENT):
+	case (AT_LBRACKET):
 	  komp(res);
 	  break;
 	}
     }
   else if (act.type == AT_IDENT)
     {
+      // TODO: Přepsat na konstantní string
       if (equals(act.data, "QUIT"))
-	res = quit;
+	strcpy(res, "QUIT");
       else if (equals(act.data, "SET"))
 	{
 	  lexa_next(&act);
@@ -102,7 +170,15 @@ void komp(char *res)
 	  push(var_v, var_n);
 	  sprintf(res, "%d", *var_v);
 	}
-      else
+      else if (equals(act.data, "CAR"))
+	{
+	  strcpy(res, "CAR");
+	}
+      else if (equals(act.data, "QUOTE"))
+	{
+	  strcpy(res, "QUOTE");
+	}
+      else // is it variable?
 	{
 	  begin();
 	  found = false;
@@ -117,7 +193,7 @@ void komp(char *res)
 		}
 	    }
 	  if (!found)
-	    die("Proměnná nenalezena");
+	    printf("(EE) Proměnná \"%s\" nenalezena\n", act.data);
 	}
     }
 }
@@ -141,9 +217,17 @@ void vyraz(char *out)
       type = ARIT;
       break;
     case '-':
-      op = divii;
+      op = subii;
       type = ARIT;
-      res = 0;
+      lexa_next(&act);
+      if (act.type == AT_VALUE || act.type == AT_IDENT
+	  || act.type == AT_LBRACKET)
+	{
+	  komp(buf);
+	  res = strtol(buf, NULL, 10);
+	}
+      else
+	die("(EE) Nelze vyhodnotit");
       break;
     case '*':
       op = mulii;
@@ -162,22 +246,50 @@ void vyraz(char *out)
 	    res = strtol(buf, NULL, 10);
 	  }
 	else
-	  die("Nelze dělit");
+	  die("(EE) Nelze dělit");
       } else if (act.data[1] == '=') {
 	op = ncomp;
 	type = BOOL;
-	break;
-      case '=':
-	op = comp;
-	type = BOOL;
-      case '<':
+      }
+      break;
+    case '=':
+      op = comp;
+      type = BOOL;
+    case '<':
+      if (act.data[1] == 0) {
 	op = small;
 	type = BOOL;
-	break;
-      case '>':
+	lexa_next(&act);
+	if (act.type == AT_VALUE || act.type == AT_IDENT
+	    || act.type == AT_LBRACKET)
+	  {
+	    komp(buf);
+	    res = strtol(buf, NULL, 10);
+	  }
+	else
+	  die("(EE) Nelze porovnat");
+      } else if (act.data[1] == '=') {
+	op = smalleq;
+	type = BOOL;
+      }
+      
+      break;
+    case '>':
+      if (act.data[1] == 0) {
 	op = big;
 	type = BOOL;
-	break;
+	lexa_next(&act);
+	if (act.type == AT_VALUE || act.type == AT_IDENT
+	    || act.type == AT_LBRACKET)
+	  {
+	    komp(buf);
+	    res = strtol(buf, NULL, 10);
+	  }
+	else
+	  die("(EE) Nelze porovnat");
+      } else if (act.data[1] == '=') {
+	op = bigeq;
+	type = BOOL;
       }
     }
 
@@ -191,7 +303,7 @@ void vyraz(char *out)
 	  res = strtol(buf, NULL, 10);
 	}
       else
-	die("Neplatný výraz");
+	printf("(EE) Neplatný výraz\n");
     }
 
   lexa_next(&act);
@@ -225,7 +337,14 @@ void vyraz(char *out)
 int start()
 {
   atom act;
-  char res[20];
+  char res[128];
+
+  // do some initialization
+  res[0] = 'Q';
+  res[1] = 'U';
+  res[2] = 'I';
+  res[3] = 'T';
+  res[4] = 0;
 
   lexa_next(&act);
   switch (act.type)
@@ -237,9 +356,18 @@ int start()
      
     default:
       komp(res);
-      if (equals(res, quit))
+      if (equals(res, "QUIT"))
 	{
 	  return 0;
+	}
+      else if (equals(res, "CAR"))
+	{
+	  lexa_next(&act);
+	  komp(res);
+	}
+      else if (equals(res, "QUOTE"))
+	{
+	  squote(res);
 	}
       printf("%s\n",res);
       break;

@@ -12,9 +12,9 @@ void die(const char *msg)
 bool equals(char *compared, char *to)
 {
   int len_compared = strlen(compared);
-  int len_to = strlen(compared);
+  int len_to = strlen(to);
   int i;
-    
+  
   if (len_compared != len_to)
     return false;
     

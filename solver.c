@@ -28,6 +28,7 @@
 
 #include "lexa.h"
 #include "synta.h"
+#include "list.h"
 
 #define EPS 1e-6
 
@@ -50,6 +51,8 @@ int main(int argc, char *argv[])
   // atom sym;
   int dalsi = 1;
   char *sptr;
+
+  atexit(cleanup);
 
   do {
     printf(" > ");
