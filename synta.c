@@ -10,6 +10,14 @@
 #define BOOL 0
 #define UNKN -1
 
+const char *qe = "QUOTE";
+const char *qt = "QUIT";
+const char *car = "CAR";
+const char *set = "SET";
+const char *hp = "HELP";
+const char *about = "ABOUT";
+const char *blank = "";
+
 char *nil = "NIL";
 char *t = "T";
 
@@ -155,10 +163,9 @@ void komp(char *res)
     }
   else if (act.type == AT_IDENT)
     {
-      // TODO: Přepsat na konstantní string
-      if (equals(act.data, "QUIT"))
-	strcpy(res, "QUIT");
-      else if (equals(act.data, "SET"))
+      if (equals(act.data, qt))
+	strcpy(res, qt);
+      else if (equals(act.data, set))
 	{
 	  lexa_next(&act);
 	  var_n = (char *) malloc(strlen(act.data) + 1);
@@ -170,15 +177,20 @@ void komp(char *res)
 	  push(var_v, var_n);
 	  sprintf(res, "%d", *var_v);
 	}
-      else if (equals(act.data, "CAR"))
+      else if (equals(act.data, car))
 	{
-	  strcpy(res, "CAR");
+	  strcpy(res, car);
 	}
-      else if (equals(act.data, "QUOTE"))
+      else if (equals(act.data, qe))
 	{
-	  strcpy(res, "QUOTE");
+	  strcpy(res, qe);
 	}
-      else // is it variable?
+      else if (equals(act.data, hp) || equals(act.data, about))
+	{
+	  help();
+	  strcpy(res, blank);
+	}
+      else // so is it variable?
 	{
 	  begin();
 	  found = false;
@@ -356,16 +368,16 @@ int start()
      
     default:
       komp(res);
-      if (equals(res, "QUIT"))
+      if (equals(res, qt))
 	{
 	  return 0;
 	}
-      else if (equals(res, "CAR"))
+      else if (equals(res, car))
 	{
 	  lexa_next(&act);
 	  komp(res);
 	}
-      else if (equals(res, "QUOTE"))
+      else if (equals(res, qe))
 	{
 	  squote(res);
 	}
