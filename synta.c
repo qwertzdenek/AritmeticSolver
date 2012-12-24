@@ -16,6 +16,7 @@ const char *car = "CAR";
 const char *set = "SET";
 const char *hp = "HELP";
 const char *about = "ABOUT";
+const char *list = "LIST";
 const char *blank = "";
 
 char *nil = "NIL";
@@ -24,31 +25,25 @@ char *t = "T";
 void komp(char *res);
 void vyraz(char *out);
 
-char *quote(char *res)
+void quote(char *res)
 {
   atom csym;
   int len = 0;
   
   lexa_get(&csym);
+
+  // TODO: vyřešit (quote (+ (- a 2) 3))
+  if (csym.type == AT_LBRACKET)
+    {
+      *res = *csym.data;
+      res++;
+      lexa_next(NULL);
+      quote(res);
+    }
+
   while (csym.type == AT_VALUE || csym.type == AT_IDENT
-	 || csym.type == AT_LBRACKET || csym.type == AT_RBRACKET
 	 || csym.type == AT_OPERATOR)
     {
-      if (csym.type == AT_LBRACKET)
-	{
-	  *res = *csym.data;
-	  res++;
-	  lexa_next(NULL);
-	  res = quote(res);
-	}
-      else if (csym.type == AT_RBRACKET)
-	{
-	  // TODO: need fix (quote (+ a 22))
-	  *res = *csym.data;
-     	  res++;
-	  break;
-	}
-
       switch (csym.type)
 	{
 	case AT_OPERATOR:
@@ -71,7 +66,11 @@ char *quote(char *res)
 	break;
     }
 
-  return res;
+  if (csym.type == AT_RBRACKET)
+    {
+      *res = *csym.data;
+      res++;
+    }
 }
 
 void squote(char *res)
@@ -172,14 +171,28 @@ void komp(char *res)
 	  strcpy(var_n, act.data);
 	  lexa_next(&act);
 	  var_v = (int *) malloc(sizeof(int));
-	  *var_v = *((int *) act.data);
+	  komp(res);
+	  *var_v = strtol(res, NULL, 10);
 	  
 	  push(var_v, var_n);
-	  sprintf(res, "%d", *var_v);
+	  //	  sprintf(res, "%d", *var_v);
 	}
       else if (equals(act.data, car))
 	{
-	  strcpy(res, car);
+	  lexa_next(&act);
+	  komp(res);
+	  if (equals(res, nil))
+	    {
+	      printf("Prázdný seznam.");
+	      res = '\0';
+	    }
+	  else
+	    {
+	    var_n = strchr(res, ';');
+
+	    if (var_n != NULL)
+	      *(var_n) = '\0';
+	    }
 	}
       else if (equals(act.data, qe))
 	{
@@ -190,6 +203,48 @@ void komp(char *res)
 	  help();
 	  strcpy(res, blank);
 	}
+      else if (equals(act.data, list))
+	{
+	  if (lexa_next(&act) && (act.type == AT_VALUE || act.type == AT_IDENT ||
+				   act.type == AT_LBRACKET))
+	    {
+	      var_v = (int *) malloc(sizeof(int));
+	      var_n = (char *) malloc(64);
+	      *var_v = 0;
+
+	      while (1)
+		{
+		  komp(res);
+
+		  strcpy(var_n + *var_v, res);
+		  *var_v += strlen(res);
+	      
+		  if (!lexa_next(&act))
+		    break;
+	      
+		  if (act.type == AT_VALUE || act.type == AT_IDENT ||
+		      act.type == AT_LBRACKET)
+		    {
+		      *(var_n + *var_v) = ';';
+		      *var_v = *var_v + 1;
+		      continue;
+		    }
+		  else
+		    break;
+		}
+	      *(var_n + *var_v) = '\0';
+
+	      strcpy(res, var_n);
+	      free(var_n);
+	      free(var_v);
+	      var_n = NULL;
+	      var_v = NULL;
+	    }
+	  else
+	    strcpy(res, nil);
+	}
+      else if (equals(act.data, nil))
+	strcpy(res, nil);
       else // so is it variable?
 	{
 	  begin();
@@ -208,6 +263,10 @@ void komp(char *res)
 	    printf("(EE) Proměnná \"%s\" nenalezena\n", act.data);
 	}
     }
+  /*  else if (act.type = AT_UNKNOWN)
+    {
+      
+    }*/
 }
 
 void vyraz(char *out)
@@ -359,6 +418,9 @@ int start()
   res[4] = 0;
 
   lexa_next(&act);
+
+  //  printf("první znak: %d", act.type);
+
   switch (act.type)
     {
     case AT_OPERATOR:
