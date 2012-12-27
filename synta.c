@@ -22,27 +22,20 @@ const char *blank = "";
 char *nil = "NIL";
 char *t = "T";
 
+int firstQe;
+
 void komp(char *res);
 void vyraz(char *out);
 
-void quote(char *res)
+char *quote(char *res)
 {
   atom csym;
   int len = 0;
+  //  char *sptr;
   
   lexa_get(&csym);
 
-  // TODO: vyřešit (quote (+ (- a 2) 3))
-  if (csym.type == AT_LBRACKET)
-    {
-      *res = *csym.data;
-      res++;
-      lexa_next(NULL);
-      quote(res);
-    }
-
-  while (csym.type == AT_VALUE || csym.type == AT_IDENT
-	 || csym.type == AT_OPERATOR)
+  while (csym.type != AT_UNKNOWN)
     {
       switch (csym.type)
 	{
@@ -52,32 +45,50 @@ void quote(char *res)
 	  res += len;
 	  break;
 	case AT_IDENT:
-	  *res++ = ' ';
+	  if (firstQe)
+	      firstQe = false;
+	  else
+	      *res++ = ' ';
 	  len = strlen(csym.data);
 	  memcpy(res, csym.data, len);
 	  res += len;
 	  break;
 	case AT_VALUE:
-	  *res++ = ' ';
+	  if (firstQe)
+	      firstQe = false;
+	  else
+	      *res++ = ' ';
 	  res += sprintf(res, "%d", *((int *) csym.data));
+	  break;
+	case AT_LBRACKET:
+	  if (firstQe)
+	      firstQe = false;
+	  else
+	      *res++ = ' ';
+	  *res++ = *csym.data;
+	  lexa_next(NULL);
+	  res = quote(res);
+	  break;
+	case AT_RBRACKET:
+	  *res++ = *csym.data;
 	  break;
 	}
       if (!lexa_next(&csym))
 	break;
     }
 
-  if (csym.type == AT_RBRACKET)
-    {
-      *res = *csym.data;
-      res++;
-    }
+  return res;
 }
 
 void squote(char *res)
 {
+  char *sptr = res;
+  
   lexa_next(NULL);
+  firstQe = true;
   res = quote(res);
   *res = 0;
+  res = sptr;
 }
 
 int addii(int a, int b)
@@ -196,7 +207,7 @@ void komp(char *res)
 	}
       else if (equals(act.data, qe))
 	{
-	  strcpy(res, qe);
+	  squote(res);
 	}
       else if (equals(act.data, hp) || equals(act.data, about))
 	{
