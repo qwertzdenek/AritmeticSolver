@@ -25,10 +25,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
+#include <errno.h>
 
 #include "lexa.h"
 #include "synta.h"
 #include "list.h"
+#include "tools.h"
 
 #define EPS 1e-6
 
@@ -37,12 +40,37 @@
 #define OPSYM_MUL 12
 #define OPSYM_DIV 13
 
-char *trim(char *ptr)
+void readl(FILE *f, char *l)
 {
-  while(isspace(*ptr++))
-    ;
+  int c;
+  char *ptr = l;
 
-  return ptr;
+  c = fgetc(f);
+
+  while (c != 10 && c != 13)
+    {
+      *ptr++ = (char) c;
+      c = fgetc(f);
+    }
+  
+  *ptr = 0;
+}
+
+
+bool has_next_line(FILE *f)
+{
+  int c;
+  bool res;
+
+  c = fgetc(f);
+
+  if ((c != 10 && c != 13) && c != EOF)
+    res = true;
+  else
+    res = false;
+  
+  fseek(f, -1, SEEK_CUR);
+  return res;
 }
 
 int main(int argc, char *argv[])
@@ -50,34 +78,64 @@ int main(int argc, char *argv[])
   char l[100];
   // atom sym;
   int dalsi = 1;
-  char *sptr;
+  char *file;
+  bool inter = 0;
+  FILE *source;
+
+  if (argc > 1)
+    {
+      file = argv[1];
+      errno = 0;
+      source = fopen(file, "r");
+      if (source == NULL)
+	{
+	  printf("Error \"%s\" opening file!\n", strerror(errno));
+	  return EXIT_FAILURE;
+	}
+    }
+  else
+    {
+      file = NULL;
+      inter = 1;
+    }
 
   atexit(cleanup);
 
   do {
-    printf(" > ");
-    fgets(l, 100, stdin);
+    if (inter)
+      {
+	printf(" > ");
+	fgets(l, 100, stdin);
+      }
+    else
+      {
+	readl(source, l);
+      }
     
-    sptr = trim(l);
-    
-    if (*sptr != '0')
+    if (equals(l, ULTIMATE))
+      {
+	printf("42\n");
+	dalsi = 1;
+	continue;
+      }
+
+    if (*(l+1) != 0)
       {
 	lexa_init(l);
 
 	dalsi = start();
       }
+
+    if (!inter)
+      {
+	dalsi = has_next_line(source);
+      }
   } while (dalsi > 0);
-
-  /*
-  while (lexa_next(&sym))
-    {
-      printf("type %d\n",sym.type);
-
-      if (sym.type == AT_OPERATOR)
-	printf("  %s\n",sym.data);
-    }
-  */
+  
+  if (!inter)
+    fclose(source);
 
   return EXIT_SUCCESS;
+
 }
 

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "lexa.h"
 #include "tools.h"
@@ -83,12 +84,30 @@ char *quote(char *res)
 void squote(char *res)
 {
   char *sptr = res;
+  char *tptr;
+  atom act;
   
-  lexa_next(NULL);
-  firstQe = true;
-  res = quote(res);
-  *res = 0;
-  res = sptr;
+  lexa_next(&act);
+  if (act.type == AT_UNKNOWN && *act.data == '\'')
+    {
+      lexa_next(&act);
+      sptr = act.data;
+      tptr = res;
+      while (*sptr != '\0')
+	{
+	  *tptr = (char) toupper(*sptr);
+	  sptr++;
+	  tptr++;
+	}
+      *tptr = '\0';
+    }
+  else
+    {
+      firstQe = true;
+      res = quote(res);
+      *res = 0;
+      res = sptr; 
+    }
 }
 
 int addii(int a, int b)
@@ -171,21 +190,23 @@ void komp(char *res)
 	  break;
 	}
     }
-  else if (act.type == AT_IDENT)
+  else if (act.type == AT_IDENT || act.type == AT_UNKNOWN)
     {
       if (equals(act.data, qt))
 	strcpy(res, qt);
       else if (equals(act.data, set))
 	{
+	  squote(res);
+	  var_n = (char *) malloc(strlen(res) + 1);
+	  strcpy(var_n, res);
+
 	  lexa_next(&act);
-	  var_n = (char *) malloc(strlen(act.data) + 1);
-	  strcpy(var_n, act.data);
-	  lexa_next(&act);
-	  var_v = (int *) malloc(sizeof(int));
 	  komp(res);
+	  var_v = (int *) malloc(sizeof(int));
 	  *var_v = strtol(res, NULL, 10);
 	  
 	  push(var_v, var_n);
+	
 	  //	  sprintf(res, "%d", *var_v);
 	}
       else if (equals(act.data, car))
@@ -195,7 +216,7 @@ void komp(char *res)
 	  if (equals(res, nil))
 	    {
 	      printf("Prázdný seznam.");
-	      res = '\0';
+	      *res = '\0';
 	    }
 	  else
 	    {
@@ -205,7 +226,7 @@ void komp(char *res)
 	      *(var_n) = '\0';
 	    }
 	}
-      else if (equals(act.data, qe))
+      else if (equals(act.data, qe) || *act.data == '\'')
 	{
 	  squote(res);
 	}
@@ -271,13 +292,18 @@ void komp(char *res)
 		}
 	    }
 	  if (!found)
-	    printf("(EE) Proměnná \"%s\" nenalezena\n", act.data);
+	    {
+	      printf("(EE) Proměnná \"%s\" nenalezena\n", act.data);
+	      strcpy(res, blank);
+	    }
 	}
     }
-  /*  else if (act.type = AT_UNKNOWN)
+  /*
+    else if (act.type = AT_UNKNOWN)
     {
       
-    }*/
+    }
+  */
 }
 
 void vyraz(char *out)

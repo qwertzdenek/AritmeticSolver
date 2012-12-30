@@ -88,6 +88,11 @@ bool lexa_next(atom *sym)
       memcpy(csym.data, tptr, ptr - tptr);
       *(csym.data + (ptr - tptr)) = 0;
     }
+  else
+    {
+      csym.type = AT_UNKNOWN;
+      *csym.data = *ptr++;
+    }
 
   if (sym != NULL)
     memcpy(sym, &csym, sizeof(atom));
