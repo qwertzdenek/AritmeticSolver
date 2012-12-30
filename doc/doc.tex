@@ -49,7 +49,7 @@ QSYM & (QUOTE) $|$ č $|$ * $|$ op
 \label{fig:gram}
 \end{figure}
 
-Jakmile jsem měl k dispotici gramatiku, nic mi nebránilo sepsat
+Jakmile jsem měl k dispozici gramatiku, nic mi nebránilo sepsat
 syntaktický analyzátor. Ještě před tím jsem využil zkušeností a vrhnul
 se na lexikální analýzu.  Potřeboval jsem něco, co mi bude rozlišovat
 typy lexikálních atomů. Detekuji tedy atomy, definované v
@@ -83,7 +83,7 @@ typedef struct {
 \end{lstlisting}
 
 Že je to dobrý nápad jsem se přesvědčil velice rychle. Voláním
-jednotlivých symbolů dostávám řeťezce s výsledkem. To dovoluje
+jednotlivých symbolů dostávám řetězce s výsledkem. To dovoluje
 snadné kombinování funkcionality. Hodí se tedy využít rekurzivního
 volání. Nevyužívám tím žádnou dynamicky alokovanou paměť.
 
