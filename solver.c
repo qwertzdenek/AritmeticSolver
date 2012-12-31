@@ -81,6 +81,9 @@ int main(int argc, char *argv[])
   char *file;
   bool inter = 0;
   FILE *source;
+  char ultimate[70];
+
+  strcpy(ultimate, ULTIMATE);
 
   if (argc > 1)
     {
@@ -112,10 +115,10 @@ int main(int argc, char *argv[])
 	readl(source, l);
       }
     
-    if (equals(l, ULTIMATE))
+    if (equals(l, ultimate, 1))
       {
 	printf("42\n");
-	dalsi = 1;
+	dalsi = has_next_line(source);
 	continue;
       }
 

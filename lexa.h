@@ -10,7 +10,7 @@
 #define AT_LBRACKET 4
 #define AT_RBRACKET 5
 
-#define ULTIMATE "What is the meaning of live, the Universe and Everything?\n"
+#define ULTIMATE "What is the meaning of live, the Universe and Everything?"
 
 typedef struct {
   unsigned char type;

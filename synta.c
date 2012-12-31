@@ -192,9 +192,9 @@ void komp(char *res)
     }
   else if (act.type == AT_IDENT || act.type == AT_UNKNOWN)
     {
-      if (equals(act.data, qt))
+      if (equals(act.data, qt, 0))
 	strcpy(res, qt);
-      else if (equals(act.data, set))
+      else if (equals(act.data, set, 0))
 	{
 	  squote(res);
 	  var_n = (char *) malloc(strlen(res) + 1);
@@ -209,11 +209,11 @@ void komp(char *res)
 	
 	  //	  sprintf(res, "%d", *var_v);
 	}
-      else if (equals(act.data, car))
+      else if (equals(act.data, car, 0))
 	{
 	  lexa_next(&act);
 	  komp(res);
-	  if (equals(res, nil))
+	  if (equals(res, nil, 0))
 	    {
 	      printf("Prázdný seznam.");
 	      *res = '\0';
@@ -226,16 +226,16 @@ void komp(char *res)
 	      *(var_n) = '\0';
 	    }
 	}
-      else if (equals(act.data, qe) || *act.data == '\'')
+      else if (equals(act.data, qe, 0) || *act.data == '\'')
 	{
 	  squote(res);
 	}
-      else if (equals(act.data, hp) || equals(act.data, about))
+      else if (equals(act.data, hp, 0) || equals(act.data, about, 0))
 	{
 	  help();
 	  strcpy(res, blank);
 	}
-      else if (equals(act.data, list))
+      else if (equals(act.data, list, 0))
 	{
 	  if (lexa_next(&act) && (act.type == AT_VALUE || act.type == AT_IDENT ||
 				   act.type == AT_LBRACKET))
@@ -275,7 +275,7 @@ void komp(char *res)
 	  else
 	    strcpy(res, nil);
 	}
-      else if (equals(act.data, nil))
+      else if (equals(act.data, nil, 0))
 	strcpy(res, nil);
       else // so is it variable?
 	{
@@ -284,7 +284,7 @@ void komp(char *res)
 	  for (i = 0; i < count(); i++)
 	    {
 	      next(&var_v, &var_n);
-	      if (equals(var_n, act.data))
+	      if (equals(var_n, act.data, 0))
 		{
 		  sprintf(res, "%d", *var_v);
 		  found = true;
@@ -467,16 +467,16 @@ int start()
      
     default:
       komp(res);
-      if (equals(res, qt))
+      if (equals(res, qt, 0))
 	{
 	  return 0;
 	}
-      else if (equals(res, car))
+      else if (equals(res, car, 0))
 	{
 	  lexa_next(&act);
 	  komp(res);
 	}
-      else if (equals(res, qe))
+      else if (equals(res, qe, 0))
 	{
 	  squote(res);
 	}

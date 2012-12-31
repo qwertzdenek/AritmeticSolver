@@ -2,6 +2,21 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <ctype.h>
+
+char *strip(char *s)
+{
+  char *end = s + strlen(s) - 1; 
+  
+  while (isspace((int) *s))
+    s++;
+  
+  while (end > s && isspace((int) *end))
+    end--;
+  *(end + 1) = 0;
+  
+  return s;
+}
 
 void help()
 {
@@ -16,8 +31,11 @@ void die(const char *msg)
   exit(EXIT_FAILURE);
 }
 
-bool equals(const char *compared, const char *to)
+bool equals(char *compared, const char *to, int stripit)
 {
+  if (stripit)
+    compared = strip(compared);
+  
   int len_compared = strlen(compared);
   int len_to = strlen(to);
   int i;
