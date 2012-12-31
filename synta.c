@@ -328,8 +328,8 @@ void vyraz(char *out)
       op = subii;
       type = ARIT;
       lexa_next(&act);
-      if (act.type == AT_VALUE || act.type == AT_IDENT
-	  || act.type == AT_LBRACKET)
+      if (act.type == AT_VALUE || act.type == AT_IDENT ||
+	      act.type == AT_LBRACKET)
 	{
 	  komp(buf);
 	  res = strtol(buf, NULL, 10);
@@ -368,8 +368,8 @@ void vyraz(char *out)
 	op = small;
 	type = BOOL;
 	lexa_next(&act);
-	if (act.type == AT_VALUE || act.type == AT_IDENT
-	    || act.type == AT_LBRACKET)
+	if (act.type == AT_VALUE || act.type == AT_IDENT ||
+	    act.type == AT_LBRACKET)
 	  {
 	    komp(buf);
 	    res = strtol(buf, NULL, 10);
@@ -387,8 +387,8 @@ void vyraz(char *out)
 	op = big;
 	type = BOOL;
 	lexa_next(&act);
-	if (act.type == AT_VALUE || act.type == AT_IDENT
-	    || act.type == AT_LBRACKET)
+	if (act.type == AT_VALUE || act.type == AT_IDENT ||
+	    act.type == AT_LBRACKET)
 	  {
 	    komp(buf);
 	    res = strtol(buf, NULL, 10);
@@ -405,13 +405,14 @@ void vyraz(char *out)
   if (type == BOOL)
     {
       lexa_next(&act);
-      if (act.type == AT_VALUE || act.type == AT_IDENT)
+      if (act.type == AT_VALUE || act.type == AT_IDENT ||
+          act.type == AT_LBRACKET)
 	{
 	  komp(buf);
 	  res = strtol(buf, NULL, 10);
 	}
       else
-	printf("(EE) Neplatný výraz\n");
+	printf("(EE) Neplatný výraz: %s\n", act.data);
     }
 
   lexa_next(&act);

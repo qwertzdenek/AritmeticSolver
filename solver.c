@@ -47,7 +47,7 @@ void readl(FILE *f, char *l)
 
   c = fgetc(f);
 
-  while (c != 10 && c != 13)
+  while (c != 10 && c != 13 && c != EOF)
     {
       *ptr++ = (char) c;
       c = fgetc(f);
@@ -81,9 +81,6 @@ int main(int argc, char *argv[])
   char *file;
   bool inter = 0;
   FILE *source;
-  char ultimate[70];
-
-  strcpy(ultimate, ULTIMATE);
 
   if (argc > 1)
     {
@@ -115,14 +112,17 @@ int main(int argc, char *argv[])
 	readl(source, l);
       }
     
-    if (equals(l, ultimate, 1))
+    if (equals(l, ULTIMATE, 1))
       {
 	printf("42\n");
-	dalsi = has_next_line(source);
+    if (inter)
+      dalsi = 1;
+    else
+      dalsi = has_next_line(source);
 	continue;
       }
 
-    if (*(l+1) != 0)
+    if (*l != 0 && *l != '\n')
       {
 	lexa_init(l);
 
