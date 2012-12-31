@@ -5,6 +5,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
 
+\lstset{language=C}
+
 \begin{document}
 \begin{titlepage}
 \includegraphics[width=30ex]{fav_cmyk}
@@ -74,7 +76,7 @@ AT\_RBRACKET & Zavírací závorka\\
 
 K získávání atomů slouží funkce \verb+lexa_next(char *sym)+.  Dostávám
 tedy rovnou parsovaná data ve formě struktury \texttt{atom}.  Ta
-vypadá takto: \lstset{language=C}
+vypadá takto:
 \begin{lstlisting}
 typedef struct {
   unsigned char type;
@@ -87,11 +89,55 @@ jednotlivých symbolů dostávám řetězce s výsledkem. To dovoluje
 snadné kombinování funkcionality. Hodí se tedy využít rekurzivního
 volání. Nevyužívám tím žádnou dynamicky alokovanou paměť.
 
+Pozici ve vstupním řetězci mám uloženou v proměnné \texttt{*ptr}.
+Ta se posouvá a výsledné kusy kopíruji do pole \texttt{data}
+vyšetřovaného atomu. Ten vždy přepíši novými daty a mám
+jeden datový prostor po celou dobu. Například můžu uložit celočíselnou
+hodnotu přímo:
+
+\begin{lstlisting}
+if (isdigit(*ptr))
+  {
+    ival = (int) strtol(ptr, &ptr, 10);
+    csym.type = AT_VALUE;
+    memcpy(csym.data, &ival, sizeof(int));
+  }
+\end{lstlisting}
+
+Když jde o řetězec, uložím ho i s ukončujícím nulovým znakem.
+
+\begin{lstlisting}
+if (is_operator(*ptr))
+  {
+    tptr = ptr;
+    while (is_operator(*ptr))
+      ptr++;
+    csym.type = AT_OPERATOR;
+    memcpy(csym.data, tptr, ptr - tptr);
+    *(csym.data + (ptr - tptr)) = 0;
+}
+\end{lstlisting}
+
+Funkce \texttt{is\_operator(char o)} je jednoduchá:
+
+\begin{lstlisting}
+bool is_operator(char o)
+{
+  if (o == '+' || o == '*' || o == '-' || o == '/' ||
+      o == '=' || o == '<' || o == '>')
+    return true;
+  else
+    return false;
+}
+\end{lstlisting}
+
 Často využívám dvě metody z modulu \texttt{tools.h}. První porovnává
 dva řetězce s hlavičkou
-\verb+bool equals(const char *compared, const char *to)+. Návratový
-typ \texttt{bool} pochází z knihovny \texttt{stdbool.h}. Druhá je
-velmi jednochá funkce \verb+void die(const char *msg)+. Ta čistě
+\verb+bool equals(char *compared, const char *to, int stripit)+. Návratový
+typ \texttt{bool} pochází z knihovny \texttt{stdbool.h}.
+Poslední parametr \texttt{stripit} říká zda je nutné oříznout
+počáteční a koncové bílé znaky z \texttt{compared} řetězce.
+Druhá je velmi jednochá funkce \verb+void die(const char *msg)+. Ta čistě
 ukončí celý program a vypíše chybovou zprávu.
 
 Každý zpracovávaný vstup začíná funkcí \texttt{start()}.  Výsledkem
@@ -107,17 +153,54 @@ tedy na počátku zvolit neutrální prvek k této operaci. Spočtená
 hodnota se ukládá do meziproměnné a nakonci tam zůstane výsledek.
 Využil jsem s výhodou datový typ ukazatel na funkci.
 
+Každý operátor má svou vlastní funkci jako tato:
+\begin{lstlisting}
+int addii(int a, int b)
+{
+  return a + b;
+}
+\end{lstlisting}
+
+Podle toho jaký operátor funkce \texttt{vyraz(char *out)}
+najde, přiřadí příslušný ukazatel na funkci \verb+int (*op)(int, int)+.
+
+Samotné vyhodnocování je pouze tento krátký cyklus:
+\begin{lstlisting}
+lexa_next(&act);
+while (act.type == AT_VALUE || act.type == AT_IDENT ||
+          act.type == AT_LBRACKET)
+  {
+    if (type == ARIT)
+      {
+        komp(buf);
+        res = op(res, strtol(buf, NULL, 10));
+      }
+    else if (type == BOOL)
+      {
+       komp(buf);
+       bres &= op(res, strtol(buf, NULL, 10));
+      }
+    if (!lexa_next(&act))
+      break;
+  }
+\end{lstlisting}
+
 \section{Používání}
 Aplikace je čistě konzolová. Funguje buď interaktivně, nebo
 dávkově.
 
 \section{Závěr}
-Hodnocení této práce je jednoduché. Programování v tomto jazyce má
+Programování v tomto jazyce má
 mnoho úskalí a snadno se stalo že něco prostě nešlo. Pod výsledek se
-rád podepíšu.
+ale rád podepíšu, protože se ukázali i velké výhody tohoto jazyka, které
+jsem rád využil.
 
 Program vznikal na více místech. Byl to ArchLinux na procesoru x86 a
 pak Debian na Raspberry Pi. Vyzkoušel jsem tedy i funkčnost na tomto
-RISC procesoru s architekturou ARMv6
+RISC procesoru s architekturou ARMv6.
+
+Editory jsem používal 2. Byl to Emacs a Geany. Vyzkoušel jsem si
+i práci s debuggerem \textsf{gdb} a vyhodnotil případné problémy
+ve \textsf{valgrind}. Zvolil jsem netradiční GNU coding style.
 
 \end{document}
