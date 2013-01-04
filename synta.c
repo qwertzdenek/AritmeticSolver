@@ -23,90 +23,79 @@ const char *blank = "";
 char *nil = "NIL";
 char *t = "T";
 
-int firstQe;
-
+// prototypy funkcí
 void komp(char *res);
 void vyraz(char *out);
+void quote_komp(char *res);
 
-char *quote(char *res)
+void quote_list(char *res)
 {
-  atom csym;
-  int len = 0;
-  //  char *sptr;
-  
-  lexa_get(&csym);
+  atom act;
+  char *var = (char *) malloc(128);
+  char *start = var;
 
-  while (csym.type != AT_UNKNOWN)
+  *var++ = '(';
+
+  // první symbol je bez uvozující mezery
+  lexa_get(&act);
+  quote_komp(res);
+  strcpy(var, res);
+  var += strlen(res);
+  
+  while (lexa_next(&act) && (act.type == AT_VALUE || act.type == AT_IDENT ||
+			     act.type == AT_LBRACKET || act.type == AT_OPERATOR))
     {
-      switch (csym.type)
-	{
-	case AT_OPERATOR:
-	  len = strlen(csym.data);
-	  memcpy(res, csym.data, len);
-	  res += len;
-	  break;
-	case AT_IDENT:
-	  if (firstQe)
-	      firstQe = false;
-	  else
-	      *res++ = ' ';
-	  len = strlen(csym.data);
-	  memcpy(res, csym.data, len);
-	  res += len;
-	  break;
-	case AT_VALUE:
-	  if (firstQe)
-	      firstQe = false;
-	  else
-	      *res++ = ' ';
-	  res += sprintf(res, "%d", *((int *) csym.data));
-	  break;
-	case AT_LBRACKET:
-	  if (firstQe)
-	      firstQe = false;
-	  else
-	      *res++ = ' ';
-	  *res++ = *csym.data;
-	  lexa_next(NULL);
-	  res = quote(res);
-	  break;
-	case AT_RBRACKET:
-	  *res++ = *csym.data;
-	  break;
-	}
-      if (!lexa_next(&csym))
-	break;
+      quote_komp(res);
+      *var++ = ' ';
+	      
+      strcpy(var, res);
+      var += strlen(res);
     }
 
-  return res;
+  strcpy(var,")\0");
+
+  strcpy(res, start);
+  free(start);
 }
 
-void squote(char *res)
+// vrací jeden symbol, ale nevyhodnocuje
+void quote_komp(char *res)
 {
-  char *sptr = res;
-  char *tptr;
+  atom act;
+
+  lexa_get(&act);
+
+  switch (act.type)
+    {
+    case AT_VALUE:
+      sprintf(res, "%d", *((int *) act.data));
+      break;
+    case AT_IDENT:
+    case AT_OPERATOR:
+      strcpy(res, act.data);
+      break;
+    case AT_LBRACKET:
+      lexa_next(&act);
+      quote_list(res);
+      break;
+    }
+}
+
+// vstup do výpisu
+void quote(char *res)
+{
   atom act;
   
-  lexa_next(&act);
-  if (act.type == AT_UNKNOWN && *act.data == '\'')
+  lexa_get(&act);
+
+  if (*act.data == '\'' || equals(act.data, qe, 0))
     {
-      lexa_next(&act);
-      sptr = act.data;
-      tptr = res;
-      while (*sptr != '\0')
-	{
-	  *tptr = (char) toupper(*sptr);
-	  sptr++;
-	  tptr++;
-	}
-      *tptr = '\0';
+      lexa_next(NULL);
+      quote_komp(res);
     }
   else
     {
-      firstQe = true;
-      res = quote(res);
-      *res = 0;
-      res = sptr; 
+      komp(res);
     }
 }
 
@@ -173,7 +162,7 @@ void komp(char *res)
   if (act.type == AT_VALUE)
     {
       sprintf(res, "%d", *((int *) act.data));
-    } 
+    }
   else if (act.type == AT_LBRACKET)
     {
       lexa_next(&act);
@@ -188,19 +177,28 @@ void komp(char *res)
 	case (AT_LBRACKET):
 	  komp(res);
 	  break;
+        case (AT_RBRACKET):
+	  strcpy(res, nil);
+	  break;
 	}
     }
+  else if (act.type == AT_RBRACKET)
+    {
+      strcpy(res, qt);
+    }
+  // identifikátor
   else if (act.type == AT_IDENT || act.type == AT_UNKNOWN)
     {
       if (equals(act.data, qt, 0))
 	strcpy(res, qt);
       else if (equals(act.data, set, 0))
 	{
-	  squote(res);
+	  lexa_next(NULL);
+	  komp(res);
 	  var_n = (char *) malloc(strlen(res) + 1);
 	  strcpy(var_n, res);
 
-	  lexa_next(&act);
+	  lexa_next(NULL);
 	  komp(res);
 	  var_v = (int *) malloc(sizeof(int));
 	  *var_v = strtol(res, NULL, 10);
@@ -209,8 +207,12 @@ void komp(char *res)
 	
 	  //	  sprintf(res, "%d", *var_v);
 	}
+      // car - vrátí první prvek seznamu
       else if (equals(act.data, car, 0))
 	{
+	  char *end;
+	  int op;
+
 	  lexa_next(&act);
 	  komp(res);
 	  if (equals(res, nil, 0))
@@ -220,69 +222,68 @@ void komp(char *res)
 	    }
 	  else
 	    {
-	    var_n = strchr(res, ';');
+	      // TODO: Parsování res, tak aby vracel
+	      //       první prvek seznamu.
 
-	    if (var_n != NULL)
-	      *(var_n) = '\0';
+	      end = res + 1;
+	      if ()
 	    }
 	}
+      // quote - Vypíše a nevyhodnotí
       else if (equals(act.data, qe, 0) || *act.data == '\'')
 	{
-	  squote(res);
+	  quote(res);
 	}
+      // Nápověda
       else if (equals(act.data, hp, 0) || equals(act.data, about, 0))
 	{
 	  help();
 	  strcpy(res, blank);
 	}
-      else if (equals(act.data, list, 0))
+      else if (equals(act.data, list, 0)) // seznam
 	{
-	  if (lexa_next(&act) && (act.type == AT_VALUE || act.type == AT_IDENT ||
-				   act.type == AT_LBRACKET))
+	  lexa_next(&act);
+	  komp(res);
+
+	  if (equals(res, nil, 0) || equals(res, qt, 0))
 	    {
-	      var_v = (int *) malloc(sizeof(int));
-	      var_n = (char *) malloc(64);
-	      *var_v = 0;
-
-	      while (1)
-		{
-		  komp(res);
-
-		  strcpy(var_n + *var_v, res);
-		  *var_v += strlen(res);
-	      
-		  if (!lexa_next(&act))
-		    break;
-	      
-		  if (act.type == AT_VALUE || act.type == AT_IDENT ||
-		      act.type == AT_LBRACKET)
-		    {
-		      *(var_n + *var_v) = ';';
-		      *var_v = *var_v + 1;
-		      continue;
-		    }
-		  else
-		    break;
-		}
-	      *(var_n + *var_v) = '\0';
-
-	      strcpy(res, var_n);
-	      free(var_n);
-	      free(var_v);
-	      var_n = NULL;
-	      var_v = NULL;
+	      printf("Prázdný seznam");
+	      strcpy(res, blank);
+	      return;
 	    }
-	  else
-	    strcpy(res, nil);
+
+	  var_n = (char *) malloc(128);
+	  char *start = var_n;
+
+	  *var_n++ = '(';
+	  
+	  strcpy(var_n, res);
+	  var_n += strlen(res);
+	  
+	  while (lexa_next(&act) && (act.type == AT_VALUE || act.type == AT_IDENT ||
+				     act.type == AT_LBRACKET))
+	    {
+	      komp(res);
+	      *var_n++ = ' ';
+	      
+	      strcpy(var_n, res);
+	      var_n += strlen(res);
+	    }
+	  
+	  strcpy(var_n,")\0");
+
+	  strcpy(res, start);
+	  free(start);
 	}
       else if (equals(act.data, nil, 0))
 	strcpy(res, nil);
-      else // so is it variable?
+      else // Musí to být tedy proměnná.
 	{
 	  begin();
 	  found = false;
 	  for (i = 0; i < count(); i++)
 	    {
+	      // seznam, který byl naplněn příkazem set
 	      next(&var_v, &var_n);
 	      if (equals(var_n, act.data, 0))
 		{
@@ -343,6 +344,7 @@ void vyraz(char *out)
       res = 1;
       break;
     case '/':
+      // to značí normální dělení
       if (act.data[1] == 0) {
 	op = divii;
 	type = ARIT;
@@ -355,7 +357,7 @@ void vyraz(char *out)
 	  }
 	else
 	  die("(EE) Nelze dělit");
-      } else if (act.data[1] == '=') {
+      } else if (act.data[1] == '=') { // operátor nerovnosti
 	op = ncomp;
 	type = BOOL;
       }
@@ -364,6 +366,7 @@ void vyraz(char *out)
       op = comp;
       type = BOOL;
     case '<':
+      // menší než
       if (act.data[1] == 0) {
 	op = small;
 	type = BOOL;
@@ -376,7 +379,7 @@ void vyraz(char *out)
 	  }
 	else
 	  die("(EE) Nelze porovnat");
-      } else if (act.data[1] == '=') {
+      } else if (act.data[1] == '=') { // menší nebo rovno
 	op = smalleq;
 	type = BOOL;
       }
@@ -395,13 +398,13 @@ void vyraz(char *out)
 	  }
 	else
 	  die("(EE) Nelze porovnat");
-      } else if (act.data[1] == '=') {
+      } else if (act.data[1] == '=') { // větší nebo rovno
 	op = bigeq;
 	type = BOOL;
       }
     }
 
-  // inicializace
+  // inicializace počáteční hodnoty před vyhodnocováním
   if (type == BOOL)
     {
       lexa_next(&act);
@@ -463,7 +466,6 @@ int start()
     {
     case AT_OPERATOR:
       vyraz(res);
-      printf("%s\n",res);
       break;
      
     default:
@@ -472,17 +474,9 @@ int start()
 	{
 	  return 0;
 	}
-      else if (equals(res, car, 0))
-	{
-	  lexa_next(&act);
-	  komp(res);
-	}
-      else if (equals(res, qe, 0))
-	{
-	  squote(res);
-	}
-      printf("%s\n",res);
       break;
     }
+
+  printf("%s\n",res);
   return 1;
 }

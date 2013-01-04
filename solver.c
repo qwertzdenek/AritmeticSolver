@@ -40,6 +40,7 @@
 #define OPSYM_MUL 12
 #define OPSYM_DIV 13
 
+// Pro čtení ze souboru
 void readl(FILE *f, char *l)
 {
   int c;
@@ -81,6 +82,7 @@ int main(int argc, char *argv[])
   char *file;
   bool inter = 0;
   FILE *source;
+  int counter = 1;
 
   if (argc > 1)
     {
@@ -104,24 +106,27 @@ int main(int argc, char *argv[])
   do {
     if (inter)
       {
-	printf(" > ");
+	printf("[%d]> ",counter);
 	fgets(l, 100, stdin);
+	counter++;
       }
     else
       {
 	readl(source, l);
       }
-    
+
+    // Nenačetli jsme náhodou klíčovou otázku?
     if (equals(l, ULTIMATE, 1))
       {
 	printf("42\n");
-    if (inter)
-      dalsi = 1;
-    else
-      dalsi = has_next_line(source);
+	if (inter)
+	  dalsi = 1;
+	else
+	  dalsi = has_next_line(source);
 	continue;
       }
 
+    // pozor na triviální případ prázdného vstupu
     if (*l != 0 && *l != '\n')
       {
 	lexa_init(l);
@@ -139,6 +144,5 @@ int main(int argc, char *argv[])
     fclose(source);
 
   return EXIT_SUCCESS;
-
 }
 

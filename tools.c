@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+// Ořízne bílé znaky na začátku a na konci
 char *strip(char *s)
 {
   char *end = s + strlen(s) - 1; 
@@ -31,6 +32,7 @@ void die(const char *msg)
   exit(EXIT_FAILURE);
 }
 
+// stripip - má se použít strip() na řetězec compared?
 bool equals(char *compared, const char *to, int stripit)
 {
   if (stripit)

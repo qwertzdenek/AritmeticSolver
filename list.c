@@ -69,6 +69,8 @@ bool pop(int **p_value, char **p_name)
     return true;
 }
 
+// nastavý začátek seznamu. Použít před začátkem
+// každého průchodu.
 void begin()
 {
     current = top;
