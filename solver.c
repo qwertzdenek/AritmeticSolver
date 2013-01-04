@@ -40,6 +40,48 @@
 #define OPSYM_MUL 12
 #define OPSYM_DIV 13
 
+char *lineptr;
+
+bool next_cmd(char *res)
+{
+  char *sptr;
+
+  // přeskočit bílé znaky
+  while (isspace(*lineptr))
+    lineptr++;
+
+  // konec řetězce
+  if (*lineptr == 0)
+    return false;
+
+  //  printf("start: %c\n", *lineptr);
+
+  sptr = lineptr;
+
+  if (*sptr == '(')
+    {
+      lineptr = parite(sptr);
+      lineptr++;
+    }
+  else
+    {
+      while (!isspace(*lineptr) && *lineptr != 0)
+	lineptr++;
+    }
+
+  memcpy(res, sptr, lineptr - sptr);
+  *(res + (lineptr - sptr)) = 0;
+
+  //  printf("end: %c\n", *lineptr);
+
+  return true;
+}
+
+void cmd_init(char *l)
+{
+  lineptr = l;
+}
+
 // Pro čtení ze souboru
 void readl(FILE *f, char *l)
 {
@@ -83,6 +125,7 @@ int main(int argc, char *argv[])
   bool inter = 0;
   FILE *source;
   int counter = 1;
+  char cmd[64];
 
   if (argc > 1)
     {
@@ -108,14 +151,15 @@ int main(int argc, char *argv[])
       {
 	printf("[%d]> ",counter);
 	fgets(l, 100, stdin);
-	counter++;
       }
     else
       {
 	readl(source, l);
       }
 
-    // Nenačetli jsme náhodou klíčovou otázku?
+    counter++;
+    
+    // Nenačetli jsme náhodou klíčovou otázku? ;)
     if (equals(l, ULTIMATE, 1))
       {
 	printf("42\n");
@@ -126,14 +170,16 @@ int main(int argc, char *argv[])
 	continue;
       }
 
-    // pozor na triviální případ prázdného vstupu
-    if (*l != 0 && *l != '\n')
-      {
-	lexa_init(l);
+    cmd_init(l);
 
+    while (next_cmd(cmd))
+      {
+	lexa_init(cmd);
+	if (!inter)
+	  printf("[%d]> %s\n", counter, cmd);
 	dalsi = start();
       }
-
+    
     if (!inter)
       {
 	dalsi = has_next_line(source);

@@ -14,6 +14,7 @@
 const char *qe = "QUOTE";
 const char *qt = "QUIT";
 const char *car = "CAR";
+const char *cdr = "CDR";
 const char *set = "SET";
 const char *hp = "HELP";
 const char *about = "ABOUT";
@@ -149,6 +150,42 @@ int bigeq(int a, int b)
   return a >= b;
 }
 
+// Vrátí ukazatel na paritní závorku, nebo na
+// poslední znak.
+char *parite(char *ptr)
+{
+  int op = 1;
+  ptr++;
+
+  while (op > 0 && *ptr != 0)
+    {
+      if (*ptr == '(')
+	op++;
+      else if (*ptr == ')')
+	op--;
+      ptr++;
+    }
+  return ptr - 1;
+}
+
+// Jedná se o výraz složený z více symbolů?
+bool isbrclist(char *start, char *end)
+{
+  bool res = false;
+
+  if (start == end)
+    return false;
+
+  while (start < end)
+    {
+      if (isspace(*start))
+	return true;
+      start++;
+    }
+
+  return res;
+}
+
 void komp(char *res)
 {
   atom act;
@@ -210,9 +247,42 @@ void komp(char *res)
       // car - vrátí první prvek seznamu
       else if (equals(act.data, car, 0))
 	{
-	  char *end;
-	  int op;
+	  lexa_next(&act);
+	  komp(res);
+	  if (equals(res, nil, 0))
+	    {
+	      printf("Prázdný seznam.");
+	      *res = '\0';
+	      return;
+	    }
+	  
+	  char *newres = (char *) malloc(68);
+	  char *start = res + 1;
+	  char *end = res + 1;
 
+	  if (*start == '(')
+	    {
+	      end = parite(start);
+	      end++;
+	    }
+	  else
+	    {
+	      while(!isspace(*end))
+		end++;
+	    }
+
+	  lexa_next(NULL);
+	  // vytvoříme nový řetězec
+	  memcpy(newres, start, end - start);
+	  *(newres + (end - start)) = 0;
+
+	  // ten zapíšeme do výsledku
+	  strcpy(res, newres);
+	  free(newres);
+	}
+      // Vrátí všechny prvky seznamu kromě prvního.
+      else if (equals(act.data, cdr, 0))
+	{
 	  lexa_next(&act);
 	  komp(res);
 	  if (equals(res, nil, 0))
@@ -220,14 +290,54 @@ void komp(char *res)
 	      printf("Prázdný seznam.");
 	      *res = '\0';
 	    }
+
+	  char *newres = (char *) malloc(68);
+
+	  // začínáme následujícím symbolem za
+	  // závorkou.
+	  char *start = res + 1;
+	  char *end = res + 1;
+
+	  if (*start == '(')
+	    {
+	      start = parite(start);
+	      start++;
+	    }
 	  else
 	    {
-	      // TODO: Parsování res, tak aby vracel
-	      //       první prvek seznamu.
-
-	      end = res + 1;
-	      if ()
+	      // přesunu se na konec prvního symbolu
+	      while(!isspace(*start))
+		start++;
 	    }
+	   
+	  // přeskočím bílé znaky
+	  while(isspace(*start))
+	    start++;
+
+	  // najít konec seznamu
+	  end = parite(start);
+
+	  lexa_next(NULL);
+	  // vytvoříme nový řetězec
+
+	  if (isbrclist(start, end))
+	    {
+	      *newres = '(';
+	      memcpy(newres + 1, start, end - start);
+	      *(newres + (end - start) + 1) = ')';
+
+	      // +2 protože jsme přidali dva znaky navíc
+	      *(newres + (end - start) + 2) = 0;
+	    }
+	  else
+	    {
+	      memcpy(newres, start, end - start);
+	      *(newres + (end - start)) = 0;
+	    }
+
+	  // ten zapíšeme do výsledku
+	  strcpy(res, newres);
+	  free(newres);
 	}
       // quote - Vypíše a nevyhodnotí
       else if (equals(act.data, qe, 0) || *act.data == '\'')
