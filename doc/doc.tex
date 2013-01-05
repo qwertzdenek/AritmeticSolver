@@ -5,7 +5,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
 \usepackage{url}
-\usepackage{a4wide}
+% \usepackage{a4wide}
 
 \usepackage{natbib}
 \bibliographystyle{csplainnat}
@@ -14,7 +14,7 @@
 
 \begin{document}
 \begin{titlepage}
-\includegraphics[width=40ex]{fav_cmyk}
+\includegraphics[bb=0 0 167 96]{fav_cmyk.pdf}
 \vfill
 \begin{center}
 {\huge Programování v jazyce C}\\[3ex]
@@ -28,29 +28,34 @@ Datum:\> \today
 \end{tabbing}
 \end{titlepage}
 
+\tableofcontents
+
 \section{Zadání}
 Naprogramujte v ANSI C přenositelnou \emph{konzolovou aplikaci}, která
 bude fungovat jako jednoduchý interpret podmnožiny jazyka LISP.
 Vstupem budou příkazy v jazyce LISP. Výstupem pak výsledek vyhodnocení
 každého výrazu.
 
-Program se bude spouštět příkazem \textsf{lisp.exe} [\textless{}vstupní-soubor\textgreater{}]. Symbol \textless{}vstupní-soubor\textgreater{}
-zastupuje nepovinny parametr -- název vstupního souboru
-se seznamem výrazů v jazyce LISP. Není-li první parametr uveden,
-program bude fungovat v interaktivním módu, kdy se příkazy budou
-provádět přímo zadáním z konzole do programu.
+Program se bude spouštět příkazem \texttt{lisp.exe
+  [\textless{}vstupní-soubor\textgreater{}]}. Symbol
+\texttt{\textless{}vstupní-soubor\textgreater{}} zastupuje nepovinny
+parametr -- název vstupního souboru se seznamem výrazů v jazyce
+LISP. Není-li první parametr uveden, program bude fungovat v
+interaktivním módu, kdy se příkazy budou provádět přímo zadáním z
+konzole do programu.
 
 Úkolem Vámi vyvinutého programu tedy je:
 \begin{enumerate}
 \item Při spuštění bez parametru bude čekat na vstup od uživatele.
-Zadaný výraz vyhodnotí a bude vyžadovat další vstup, dokud nebude
-uveden výraz \texttt{(quit)}.
+  Zadaný výraz vyhodnotí a bude vyžadovat další vstup, dokud nebude
+  uveden výraz \texttt{(quit)}.
 \item Při spuštění s parametrem načte zadaný vstupní soubor, každý
-výraz v něm uvedený vypíše na obrazovku, okamžitě vyhodnotí a
-výsledek vypíše na obrazovku. Po zpracování posledního výrazu dojde
-k ukončení programu. Proto nemusí být jako poslední výraz uveden výraz
-\texttt{(quit)}. Na jedné řádce v souboru může být uvedeno více
-samostatných výrazů a program je musí být schopen správně zpracovat.
+  výraz v něm uvedený vypíše na obrazovku, okamžitě vyhodnotí a
+  výsledek vypíše na obrazovku. Po zpracování posledního výrazu dojde
+  k ukončení programu. Proto nemusí být jako poslední výraz uveden
+  výraz \texttt{(quit)}. Na jedné řádce v souboru může být uvedeno
+  více samostatných výrazů a program je musí být schopen správně
+  zpracovat.
 \end{enumerate}
 
 Váš program může být během testování spuštěn například takto:
@@ -58,11 +63,11 @@ Váš program může být během testování spuštěn například takto:
   $ lisp.exe test.lisp
 \end{verbatim}
 
-Hotovou práci odevzdejte uploadem na server podle pokynů na webu,
-v jediném archivu ZIP, pojmenovaném Vaším osobním číslem, tj. např.
-\textsf{A09B1234P.zip}. Archiv nechť obsahuje všechny zdrojové
-soubory potřebné k přeložení programu, \emph{makefile} pro Windows
-i Linux (pro překlad v UNIXu/Linuxu připravte soubor pojmenovaný
+Hotovou práci odevzdejte uploadem na server podle pokynů na webu, v
+archivu ZIP, pojmenovaném Vaším osobním číslem, tj. např.
+\textsf{A09B1234P.zip}. Archiv nechť obsahuje všechny zdrojové soubory
+potřebné k přeložení programu, \textsf{makefile} pro Windows i Linux
+(pro překlad v UNIXu/Linuxu připravte soubor pojmenovaný
 \textsf{Makefile} a pro Windows \textsf{Makefile.win}) a dokumentaci
 ve formátu PDF vytvořenou v typografickém systému \TeX{}, resp.
 \LaTeX{}. Bude-li některá z částí chybět, kontrolní skript Vaši práci
@@ -78,7 +83,8 @@ Totiž, že vše je seznamem.
 Při návrhu programu jsem se řídil jednoduchou gramatikou, která je
 naznačena na obrázku \ref{fig:gram}. Každý neterminální symbol značený
 velkými písmeny představuje jednu funkci. Terminální symboly jsou:
-\emph{č} jako číslo, \emph{op} jako operátor, * je identifikátor proměnné.
+\emph{č} jako číslo, \emph{op} jako operátor, * je identifikátor
+proměnné.
 
 \begin{figure}
 \centering
@@ -131,15 +137,16 @@ typedef struct {
 \end{lstlisting}
 
 Že je to dobrý nápad jsem se přesvědčil velice rychle. Voláním
-jednotlivých symbolů dostávám řetězce s výsledkem. To dovoluje
-snadné kombinování funkcionality. Hodí se tedy využít rekurzivního
+jednotlivých symbolů dostávám řetězce s výsledkem. To dovoluje snadné
+kombinování funkcionality. Hodí se tedy využít rekurzivního
 volání. Nevyužívám tím žádnou dynamicky alokovanou paměť.
 
-Každý příkaz je nutné inicializovat funkcí \verb+void lexa_init(char*strin)+,
-která vynuluje aktuální symbol a nastavý vnitřní ukazatel na
-řetězec \texttt{static char *ptr}. Ten se posouvá v závislosti na
-datech a výsledné kusy kopíruji do pole \texttt{data} vyšetřovaného
-atomu. Například můžu uložit celočíselnou hodnotu přímo:
+Každý příkaz je nutné inicializovat funkcí
+\verb+void lexa_init(char*strin)+, která vynuluje aktuální symbol a
+nastavý vnitřní ukazatel na řetězec \texttt{static char *ptr}. Ten se
+posouvá v závislosti na datech a výsledné kusy kopíruji do pole
+\texttt{data} vyšetřovaného atomu. Například můžu uložit celočíselnou
+hodnotu přímo:
 
 \begin{lstlisting}
 if (isdigit(*ptr))
@@ -150,8 +157,8 @@ if (isdigit(*ptr))
 }
 \end{lstlisting}
 
-Řetězec uložím i s ukončujícím nulovým znakem.
-Rozdíl konečného ukazatele a počátečního dává počet prvků.
+Řetězec uložím i s ukončujícím nulovým znakem.  Rozdíl konečného
+ukazatele a počátečního dává počet prvků.
 
 \begin{lstlisting}
 if (is_operator(*ptr))
@@ -180,32 +187,31 @@ bool is_operator(char o)
 
 Aktuální, symbol dostaneme voláním
 \verb+void lexa_get(atom *sym)+. Tím se analyzátor nikam nepřesouvá.
-Pořadí volání funkcí je následující: \texttt{init}, \texttt{next} a libovolně
-\texttt{get}.
+Pořadí volání funkcí je následující: \texttt{init}, \texttt{next} a
+libovolně \texttt{get}.
 
 Často využívám dvě metody z modulu \texttt{tools.h}. První porovnává
 dva řetězce s hlavičkou
 \verb+bool equals(char *compared, const char *to, int stripit)+. Návratový
-typ \texttt{bool} pochází z knihovny \texttt{stdbool.h}.
-Poslední parametr \texttt{stripit} říká, zda je nutné oříznout
-počáteční a koncové bílé znaky z řetězce \texttt{compared}.
-Druhá je velmi jednochá funkce \verb+void die(const char *msg)+. Ta čistě
-ukončí celý program a vypíše chybovou zprávu.
+typ \texttt{bool} pochází z knihovny \texttt{stdbool.h}.  Poslední
+parametr \texttt{stripit} říká, zda je nutné oříznout počáteční a
+koncové bílé znaky z řetězce \texttt{compared}.  Druhá je velmi
+jednochá funkce \verb+void die(const char *msg)+. Ta čistě ukončí celý
+program a vypíše chybovou zprávu.
 
 \subsection{Syntaktická analýza}
 Každý zpracovávaný vstup začíná funkcí \texttt{start()} z modulu
-\textsf{synta}.  Výsledkem
-této funkce je buď 1 nebo 0. To značí, zda se má číst další vstup.
-Další zásadní funkce jsou \verb+void vyraz(char *out)+ a
-\verb+void komp(char *res)+. Podle gramatiky už je zjevné jaké
-vstupy zpracovávají.
+\textsf{synta}.  Výsledkem této funkce je buď 1 nebo 0. To značí, zda
+se má číst další vstup.  Zásadní funkce jsou
+\verb+void vyraz(char *out)+ a \verb+void komp(char *res)+. Podle
+gramatiky už je zjevné jaké vstupy zpracovávají.
 
 Aritmetické výrazy byly dvojího typu. Buď aritmetické nebo
 booleovské. Každý aritmetický výraz je vyhodnocen zleva doprava
-postupným aplikováním operátoru na prvním místě. Musel jsem
-tedy na počátku zvolit neutrální prvek k této operaci. Spočtená
-hodnota se ukládá do meziproměnné a nakonci tam zůstane výsledek.
-Využil jsem s výhodou datový typ ukazatel na funkci.
+postupným aplikováním operátoru na prvním místě. Musel jsem tedy na
+počátku zvolit neutrální prvek k této operaci. Spočtená hodnota se
+ukládá do meziproměnné a nakonci tam zůstane výsledek.  Využil jsem s
+výhodou datový typ ukazatel na funkci.
 
 Každý operátor má svou vlastní funkci jako tato:
 \begin{lstlisting}
@@ -215,8 +221,8 @@ int addii(int a, int b)
 }
 \end{lstlisting}
 
-Podle toho jaký operátor funkce \texttt{vyraz(char *out)}
-najde, přiřadí příslušný ukazatel na funkci \verb+int (*op)(int, int)+.
+Podle toho jaký operátor funkce \texttt{vyraz(char *out)} najde,
+přiřadí příslušný ukazatel na funkci \verb+int (*op)(int, int)+.
 
 Samotné vyhodnocování je pouze tento krátký cyklus:
 \begin{lstlisting}
@@ -239,9 +245,9 @@ while (act.type == AT_VALUE || act.type == AT_IDENT ||
   }
 \end{lstlisting}
 
-Zpracování jedné komponenty zabralo spoustu kódu.
-Zjišťuje se o jaký atom se jedná a tudíž je zde spoustu
-možností. Vyhodnocují se v následujícím pořadí:
+Zpracování jedné komponenty zabralo spoustu kódu.  Zjišťuje se o jaký
+atom se jedná a tudíž je zde spoustu možností. Vyhodnocují se v
+následujícím pořadí:
 \begin{itemize}
 \item číslo
 \item ozávorkovaný výraz
@@ -265,9 +271,9 @@ výraz, nebo další komponentu. Jednotlivé identifikátory představují
 vnitřní příkazy interpretu až na poslední možnost, kdy se vyhledá
 proměnná v seznamu uložených proměnných.
 
-Porovnávání názvu identifikátoru zajšťuje funkce \texttt{equals}
-a vyzkouším postupně všechny možné řetězce. Nastavení hodnoty
-proměnné vypadá jednoduše.
+Porovnávání názvu identifikátoru zajšťuje funkce \texttt{equals} a
+vyzkouším postupně všechny možné řetězce. Nastavení hodnoty proměnné
+vypadá jednoduše.
 
 \begin{lstlisting}
 if (equals(act.data, set, 0))
@@ -288,14 +294,17 @@ if (equals(act.data, set, 0))
 
 Při změně hodnoty která v seznamu již je, nepotřebuji najít a mazat
 starou hodnotu. Protože přidávám vždy na konec a prohledávám odzadu,
-starou hodnotu nikdy nenajdu. Do seznamu vkládám v konstantním
-čase.
+starou hodnotu nikdy nenajdu. Do seznamu vkládám v konstantním čase.
 
 \section{Používání}
+K překladu aplikace není třeba žádné zvláštní závislosti. Potřeba je
+pouze překladač jazyka C. Testován byl pouze překladač \textsf{GCC}.
+Přibalen je soubor \textsf{Makefile}. Po překladu pomocí příkazu
+\texttt{make} vznikne soubor \textsf{lisp}.
+
 Aplikace je čistě konzolová. Funguje buď interaktivně, nebo
-dávkově. Spustí--li se aplikace bez parametru, bude čekat
-na vstup uživatele. Každý příkaz oddělí stisknutím
-klávesy ENTER.
+dávkově. Spustí--li se aplikace bez parametru, bude čekat na vstup
+uživatele. Každý příkaz oddělí uživatel stisknutím klávesy ENTER.
 
 Výstup pak vypadá nějak takto:
 \begin{verbatim}
@@ -311,11 +320,13 @@ Výstup pak vypadá nějak takto:
 (12 2 4)
 \end{verbatim}
 
-Program se skončí zadáním \texttt{(quit)}. Pokud jste líní
-funguje i \texttt{quit}. Již jsem se zmínil během popisu
-funkce \texttt{komp()} jaké příkazy jsou podporovány.
-Nyní uvedu přehledný seznam i s popisem funkce.
+Program se skončí zadáním \texttt{(quit)}. Pokud jste líní funguje i
+\texttt{quit} bez ozávorkování. Již jsem se zmínil během popisu funkce
+\texttt{komp()} jaké příkazy jsou podporovány. V tabulce \ref{tab:prik}
+se můžete dočíst o podporovaných příkazech.
 
+\begin{table}
+\centering
 \begin{tabular}{|r|l|}
 \hline
 quote & argument nebude vyhodnocen\\ \hline
@@ -324,28 +335,63 @@ car & vrátí první prvek seznamu\\ \hline
 cdr & vrátí seznam bez prvního prvku\\ \hline
 set & uloží hodnotu proměnné\\ \hline
 quit & ukončí program\\ \hline
-help & vypíše informace o autorovi a licenci\\
+help/about & vypíše informace o autorovi a licenci\\
 \hline
 \end{tabular}
+\caption{Podporované příkazy interpretu}
+\label{tab:prik}
+\end{table}
 
-Na závěr mám přichystané malé překvapení, protože že umí
-odpovědět i na největší otázku. Zkuste napsat
-\texttt{What is the meaning of live, the Universe
-and Everything?}.
+Dále je jsou k dispozici klasické operátory. Všechny operátory se
+zapisují prefixově. To znamená že prvním symbolem je operátor a pak
+následují všechny následující, na které se postupně aplikuje operace.
+Seznam podporovaných operátor je v tabulce \ref{tab:op}.
+
+\begin{table}
+\centering
+\begin{tabular}{|r|l|}
+\hline
++ & sečte vrátí výsledek\\ \hline
+- & veme první a postupně odečítá\\ \hline
+* & vynásobí a vrátí výsledek\\ \hline
+/ & veme první a postupně dělí\\ \hline
+= & testuje na rovnost všech\\ \hline
+/= & testuje na nerovnost\\ \hline
+\textgreater{} & testuje zda jsou prvky menší než předchozí\\ \hline
+\textless{} & testuje zda jsou prvky větší než předchozí\\ \hline
+\textgreater{=} & jako v minulém, ale současně na rovnost\\ \hline
+\textless{=} & jako v minulém, ale současně na rovnost\\ \hline
+\end{tabular}
+\caption{Podporované operátory}
+\label{tab:op}
+\end{table}
+
+Na závěr mám přichystané malé překvapení, protože že umí odpovědět i
+na největší otázku. Zkuste napsat \texttt{What is the meaning of live,
+  The Universe and Everything?}.
 
 \section{Závěr}
-Programování v tomto jazyce má
-mnoho úskalí a snadno se stalo že něco prostě nešlo. Pod výsledek se
-ale rád podepíšu, protože se ukázali i velké výhody tohoto jazyka, které
-jsem rád využil.
+Programování v tomto jazyce má mnoho úskalí a snadno se stalo že něco
+prostě nešlo. Pod výsledek se ale rád podepíšu, protože se ukázali i
+velké výhody tohoto jazyka, které jsem rád využil. Práce s řetězci je
+občas výhodná. Mohu alokovat kus paměti, který využívám po celou dobu
+běhu programu. Konec řetězce zajistím pouhým zapsáním nulového
+znaku. Ve vyšších jazycích je nemyslitelné, že dokonce nemusím ukládat
+jen řetězec, ale i jakákoli jiná data když vím že tam budou. Třeba
+zapsat strukturu.
+
+Do budoucna by program vyžadoval přidat možnost rozšiřování na další
+příkazy. Veškeré mé funkce byli natvrdo nakódovány a přidat např.
+funkci na vrácení počtu prvků v seznamu by vyžadovalo další zvětšování
+modulu \textsf{synta}. Ten by se měl rozdělit do několika podprogramů.
 
 Program vznikal na více místech. Byl to ArchLinux na procesoru x86 a
 pak Debian na Raspberry Pi. Vyzkoušel jsem tedy i funkčnost na tomto
 RISC procesoru s architekturou ARMv6.
 
-Editory jsem používal 2. Byl to Emacs a Geany. Vyzkoušel jsem si
-i práci s debuggerem \textsf{gdb} a vyhodnotil případné problémy
-v programu \textsf{valgrind}. Zvolil jsem netradiční GNU coding style.
+Textové editory jsem používal 2. Byl to Emacs a Geany. Vyzkoušel jsem si i
+práci s debuggerem \textsf{gdb} a vyhodnotil případné problémy v
+programu \textsf{valgrind}. Zvolil jsem netradiční GNU coding style.
 
 \nocite{wiki:cpro}
 \nocite{pred:c}
