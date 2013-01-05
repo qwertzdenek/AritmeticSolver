@@ -63,6 +63,11 @@ bool next_cmd(char *res)
       lineptr = parite(sptr);
       lineptr++;
     }
+  else if (*sptr == '\'')
+    {
+      lineptr = parite(sptr + 1);
+      lineptr++;
+    }
   else
     {
       while (!isspace(*lineptr) && *lineptr != 0)
@@ -124,7 +129,8 @@ int main(int argc, char *argv[])
   char *file;
   bool inter = 0;
   FILE *source;
-  int counter = 1;
+  int counterFile = 0;
+  int counter = 0;
   char cmd[64];
 
   if (argc > 1)
@@ -147,6 +153,7 @@ int main(int argc, char *argv[])
   atexit(cleanup);
 
   do {
+    counter++;
     if (inter)
       {
 	printf("[%d]> ",counter);
@@ -156,8 +163,6 @@ int main(int argc, char *argv[])
       {
 	readl(source, l);
       }
-
-    counter++;
     
     // Nenačetli jsme náhodou klíčovou otázku? ;)
     if (equals(l, ULTIMATE, 1))
@@ -174,9 +179,10 @@ int main(int argc, char *argv[])
 
     while (next_cmd(cmd))
       {
+	counterFile++;
 	lexa_init(cmd);
 	if (!inter)
-	  printf("[%d]> %s\n", counter, cmd);
+	  printf("[%d]> %s\n", counterFile, cmd);
 	dalsi = start();
       }
     
@@ -186,6 +192,8 @@ int main(int argc, char *argv[])
       }
   } while (dalsi > 0);
   
+  printf("Bye.\n");
+
   if (!inter)
     fclose(source);
 

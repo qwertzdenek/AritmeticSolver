@@ -1,50 +1,96 @@
-\documentclass{article}
+\documentclass[a4paper, 12pt]{article}
 
 \usepackage{czech}
 \usepackage{graphicx}
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
+\usepackage{url}
+\usepackage{a4wide}
+
+\usepackage{natbib}
+\bibliographystyle{csplainnat}
 
 \lstset{language=C}
 
 \begin{document}
 \begin{titlepage}
-\includegraphics[width=30ex]{fav_cmyk}
+\includegraphics[width=40ex]{fav_cmyk}
 \vfill
 \begin{center}
-{\huge Programování v jazyce C}\\[2ex]
+{\huge Programování v jazyce C}\\[3ex]
 {\Large Interpret podmnožiny jazyka LISP}
 \end{center}
 \vfill
 \begin{tabbing}
 Vypracoval: \hspace{1ex}\=Zdeněk Janeček\kill
-Vypracoval: \>Zdeněk \textsc{Janeček}\\
+Vypracoval: \>Zdeněk \textsc{Janeček}\\[1ex]
 Datum:\> \today
 \end{tabbing}
 \end{titlepage}
 
+\section{Zadání}
+Naprogramujte v ANSI C přenositelnou \emph{konzolovou aplikaci}, která
+bude fungovat jako jednoduchý interpret podmnožiny jazyka LISP.
+Vstupem budou příkazy v jazyce LISP. Výstupem pak výsledek vyhodnocení
+každého výrazu.
+
+Program se bude spouštět příkazem \textsf{lisp.exe} [\textless{}vstupní-soubor\textgreater{}]. Symbol \textless{}vstupní-soubor\textgreater{}
+zastupuje nepovinny parametr -- název vstupního souboru
+se seznamem výrazů v jazyce LISP. Není-li první parametr uveden,
+program bude fungovat v interaktivním módu, kdy se příkazy budou
+provádět přímo zadáním z konzole do programu.
+
+Úkolem Vámi vyvinutého programu tedy je:
+\begin{enumerate}
+\item Při spuštění bez parametru bude čekat na vstup od uživatele.
+Zadaný výraz vyhodnotí a bude vyžadovat další vstup, dokud nebude
+uveden výraz \texttt{(quit)}.
+\item Při spuštění s parametrem načte zadaný vstupní soubor, každý
+výraz v něm uvedený vypíše na obrazovku, okamžitě vyhodnotí a
+výsledek vypíše na obrazovku. Po zpracování posledního výrazu dojde
+k ukončení programu. Proto nemusí být jako poslední výraz uveden výraz
+\texttt{(quit)}. Na jedné řádce v souboru může být uvedeno více
+samostatných výrazů a program je musí být schopen správně zpracovat.
+\end{enumerate}
+
+Váš program může být během testování spuštěn například takto:
+\begin{verbatim}
+  $ lisp.exe test.lisp
+\end{verbatim}
+
+Hotovou práci odevzdejte uploadem na server podle pokynů na webu,
+v jediném archivu ZIP, pojmenovaném Vaším osobním číslem, tj. např.
+\textsf{A09B1234P.zip}. Archiv nechť obsahuje všechny zdrojové
+soubory potřebné k přeložení programu, \emph{makefile} pro Windows
+i Linux (pro překlad v UNIXu/Linuxu připravte soubor pojmenovaný
+\textsf{Makefile} a pro Windows \textsf{Makefile.win}) a dokumentaci
+ve formátu PDF vytvořenou v typografickém systému \TeX{}, resp.
+\LaTeX{}. Bude-li některá z částí chybět, kontrolní skript Vaši práci
+odmítne.
+
 \section{Problematika}
 Každý programovací popisujeme gramatikou jako každý jíný jazyk.
-Prefixový zápis celou věc zjednodušuje, narozdíl od běžného přístupu.
-LISP nám už v historii ukázal že lze programovat lehce jinak.  Totiž,
-že vše je seznamem.
+Prefixový zápis celou věc zjednodušuje, narozdíl od běžného infixového
+zápisu. LISP nám už v historii ukázal že lze programovat lehce jinak.
+Totiž, že vše je seznamem.
 
-Při návrhu programu jsem se řídil jednoduchou gramatikou, která je na
-obrázku \ref{fig:gram}. Každý neterminální symbol značený velkými
-písmeny představuje jednu funkci. Terminální symboly jsou: \emph{č}
-jako číslo, \emph{op} jako operátor, * je identifikátor proměnné.
+\subsection{Lexikální analýza}
+Při návrhu programu jsem se řídil jednoduchou gramatikou, která je
+naznačena na obrázku \ref{fig:gram}. Každý neterminální symbol značený
+velkými písmeny představuje jednu funkci. Terminální symboly jsou:
+\emph{č} jako číslo, \emph{op} jako operátor, * je identifikátor proměnné.
 
 \begin{figure}
 \centering
 \begin{tabular}{r@{$\quad\longrightarrow\quad$}l}
 START & VÝRAZ $|$ KOMP\\
-VYRAZ & op KOMP RETEZ\\
+VYRAZ & op \{KOMP\}\\
 KOMP & č $|$ IDENT $|$ (VYRAZ) $|$ (KOMP)\\
-RETEZ & KOMP RETEZ $|$ KOMP\\
 IDENT & QUOTE $|$ quit $|$ set $|$ car $|$ *\\[1ex]
-QUOTE & QSYM QRETEZ\\
-QRETEZ & QUOTE $|$ QSYM\\
-QSYM & (QUOTE) $|$ č $|$ * $|$ op
+QUOTE & QKOMP $|$ KOMP\\
+QKOMP & č $|$ op $|$ * $|$ (QLIST)\\
+QLIST & \{QKOMP\}
+
 \end{tabular}
 
 \caption{Gramatika zadaného jazyka.}
@@ -74,7 +120,7 @@ AT\_RBRACKET & Zavírací závorka\\
 \label{tab:atom}
 \end{table}
 
-K získávání atomů slouží funkce \verb+lexa_next(char *sym)+.  Dostávám
+K získávání atomů slouží funkce \verb+lexa_next(atom *sym)+.  Dostávám
 tedy rovnou parsovaná data ve formě struktury \texttt{atom}.  Ta
 vypadá takto:
 \begin{lstlisting}
@@ -89,32 +135,33 @@ jednotlivých symbolů dostávám řetězce s výsledkem. To dovoluje
 snadné kombinování funkcionality. Hodí se tedy využít rekurzivního
 volání. Nevyužívám tím žádnou dynamicky alokovanou paměť.
 
-Pozici ve vstupním řetězci mám uloženou v proměnné \texttt{*ptr}.
-Ta se posouvá a výsledné kusy kopíruji do pole \texttt{data}
-vyšetřovaného atomu. Ten vždy přepíši novými daty a mám
-jeden datový prostor po celou dobu. Například můžu uložit celočíselnou
-hodnotu přímo:
+Každý příkaz je nutné inicializovat funkcí \verb+void lexa_init(char*strin)+,
+která vynuluje aktuální symbol a nastavý vnitřní ukazatel na
+řetězec \texttt{static char *ptr}. Ten se posouvá v závislosti na
+datech a výsledné kusy kopíruji do pole \texttt{data} vyšetřovaného
+atomu. Například můžu uložit celočíselnou hodnotu přímo:
 
 \begin{lstlisting}
 if (isdigit(*ptr))
-  {
-    ival = (int) strtol(ptr, &ptr, 10);
-    csym.type = AT_VALUE;
-    memcpy(csym.data, &ival, sizeof(int));
-  }
+{
+  ival = (int) strtol(ptr, &ptr, 10);
+  csym.type = AT_VALUE;
+  memcpy(csym.data, &ival, sizeof(int));
+}
 \end{lstlisting}
 
-Když jde o řetězec, uložím ho i s ukončujícím nulovým znakem.
+Řetězec uložím i s ukončujícím nulovým znakem.
+Rozdíl konečného ukazatele a počátečního dává počet prvků.
 
 \begin{lstlisting}
 if (is_operator(*ptr))
-  {
-    tptr = ptr;
-    while (is_operator(*ptr))
-      ptr++;
-    csym.type = AT_OPERATOR;
-    memcpy(csym.data, tptr, ptr - tptr);
-    *(csym.data + (ptr - tptr)) = 0;
+{
+  tptr = ptr;
+  while (is_operator(*ptr))
+    ptr++;
+  csym.type = AT_OPERATOR;
+  memcpy(csym.data, tptr, ptr - tptr);
+  *(csym.data + (ptr - tptr)) = 0;
 }
 \end{lstlisting}
 
@@ -131,16 +178,23 @@ bool is_operator(char o)
 }
 \end{lstlisting}
 
+Aktuální, symbol dostaneme voláním
+\verb+void lexa_get(atom *sym)+. Tím se analyzátor nikam nepřesouvá.
+Pořadí volání funkcí je následující: \texttt{init}, \texttt{next} a libovolně
+\texttt{get}.
+
 Často využívám dvě metody z modulu \texttt{tools.h}. První porovnává
 dva řetězce s hlavičkou
 \verb+bool equals(char *compared, const char *to, int stripit)+. Návratový
 typ \texttt{bool} pochází z knihovny \texttt{stdbool.h}.
-Poslední parametr \texttt{stripit} říká zda je nutné oříznout
-počáteční a koncové bílé znaky z \texttt{compared} řetězce.
+Poslední parametr \texttt{stripit} říká, zda je nutné oříznout
+počáteční a koncové bílé znaky z řetězce \texttt{compared}.
 Druhá je velmi jednochá funkce \verb+void die(const char *msg)+. Ta čistě
 ukončí celý program a vypíše chybovou zprávu.
 
-Každý zpracovávaný vstup začíná funkcí \texttt{start()}.  Výsledkem
+\subsection{Syntaktická analýza}
+Každý zpracovávaný vstup začíná funkcí \texttt{start()} z modulu
+\textsf{synta}.  Výsledkem
 této funkce je buď 1 nebo 0. To značí, zda se má číst další vstup.
 Další zásadní funkce jsou \verb+void vyraz(char *out)+ a
 \verb+void komp(char *res)+. Podle gramatiky už je zjevné jaké
@@ -177,17 +231,107 @@ while (act.type == AT_VALUE || act.type == AT_IDENT ||
       }
     else if (type == BOOL)
       {
-       komp(buf);
-       bres &= op(res, strtol(buf, NULL, 10));
+        komp(buf);
+        bres &= op(res, strtol(buf, NULL, 10));
       }
     if (!lexa_next(&act))
       break;
   }
 \end{lstlisting}
 
+Zpracování jedné komponenty zabralo spoustu kódu.
+Zjišťuje se o jaký atom se jedná a tudíž je zde spoustu
+možností. Vyhodnocují se v následujícím pořadí:
+\begin{itemize}
+\item číslo
+\item ozávorkovaný výraz
+\item identifikátor
+\begin{itemize}
+\item QUIT
+\item SET
+\item CAR
+\item CDR
+\item QUOTE
+\item HELP
+\item LIST
+\item NIL
+\item proměnná
+\end{itemize}
+
+\end{itemize}
+
+Číslem se rozumí triviální vstup čísla. Ozávorkovaný výraz zavolá
+výraz, nebo další komponentu. Jednotlivé identifikátory představují
+vnitřní příkazy interpretu až na poslední možnost, kdy se vyhledá
+proměnná v seznamu uložených proměnných.
+
+Porovnávání názvu identifikátoru zajšťuje funkce \texttt{equals}
+a vyzkouším postupně všechny možné řetězce. Nastavení hodnoty
+proměnné vypadá jednoduše.
+
+\begin{lstlisting}
+if (equals(act.data, set, 0))
+  {
+    lexa_next(NULL);
+    komp(res);
+    var_n = (char *) malloc(strlen(res) + 1);
+    strcpy(var_n, res);
+
+    lexa_next(NULL);
+    komp(res);
+    var_v = (int *) malloc(sizeof(int));
+    *var_v = strtol(res, NULL, 10);
+	  
+    push(var_v, var_n);
+  }
+\end{lstlisting}
+
+Při změně hodnoty která v seznamu již je, nepotřebuji najít a mazat
+starou hodnotu. Protože přidávám vždy na konec a prohledávám odzadu,
+starou hodnotu nikdy nenajdu. Do seznamu vkládám v konstantním
+čase.
+
 \section{Používání}
 Aplikace je čistě konzolová. Funguje buď interaktivně, nebo
-dávkově.
+dávkově. Spustí--li se aplikace bez parametru, bude čekat
+na vstup uživatele. Každý příkaz oddělí stisknutím
+klávesy ENTER.
+
+Výstup pak vypadá nějak takto:
+\begin{verbatim}
+[1]> (set 'a 12)
+12
+[2]> (set 'x1 2)
+2
+[3]> (set 'x2 (* x1 2))
+4
+[4]> (* x1 x2)
+8
+[5]> (list a x1 x2)
+(12 2 4)
+\end{verbatim}
+
+Program se skončí zadáním \texttt{(quit)}. Pokud jste líní
+funguje i \texttt{quit}. Již jsem se zmínil během popisu
+funkce \texttt{komp()} jaké příkazy jsou podporovány.
+Nyní uvedu přehledný seznam i s popisem funkce.
+
+\begin{tabular}{|r|l|}
+\hline
+quote & argument nebude vyhodnocen\\ \hline
+list & argumenty budou vráceny jako seznam\\ \hline
+car & vrátí první prvek seznamu\\ \hline
+cdr & vrátí seznam bez prvního prvku\\ \hline
+set & uloží hodnotu proměnné\\ \hline
+quit & ukončí program\\ \hline
+help & vypíše informace o autorovi a licenci\\
+\hline
+\end{tabular}
+
+Na závěr mám přichystané malé překvapení, protože že umí
+odpovědět i na největší otázku. Zkuste napsat
+\texttt{What is the meaning of live, the Universe
+and Everything?}.
 
 \section{Závěr}
 Programování v tomto jazyce má
@@ -201,6 +345,10 @@ RISC procesoru s architekturou ARMv6.
 
 Editory jsem používal 2. Byl to Emacs a Geany. Vyzkoušel jsem si
 i práci s debuggerem \textsf{gdb} a vyhodnotil případné problémy
-ve \textsf{valgrind}. Zvolil jsem netradiční GNU coding style.
+v programu \textsf{valgrind}. Zvolil jsem netradiční GNU coding style.
+
+\nocite{wiki:cpro}
+\nocite{pred:c}
+\bibliography{zdroje}
 
 \end{document}

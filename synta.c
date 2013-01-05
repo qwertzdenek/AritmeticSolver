@@ -577,7 +577,6 @@ int start()
     case AT_OPERATOR:
       vyraz(res);
       break;
-     
     default:
       komp(res);
       if (equals(res, qt, 0))
