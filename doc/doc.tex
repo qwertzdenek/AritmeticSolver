@@ -7,6 +7,9 @@
 \usepackage{url}
 % \usepackage{a4wide}
 
+\def\CS{$\cal C\kern-.1667em\lower.5ex\hbox{$\cal S$}\kern-.075em $}
+\DeclareUrlCommand\url{\def\UrlLeft{<}\def\UrlRight{>} \urlstyle{tt}}
+
 \usepackage{natbib}
 \bibliographystyle{csplainnat}
 
@@ -380,11 +383,14 @@ pak Debian na Raspberry Pi. Vyzkoušel jsem tedy i funkčnost na tomto
 RISC procesoru s~architekturou ARMv6.
 
 Textové editory jsem používal 2. Byl to Emacs a Geany. Vyzkoušel jsem si i
-práci s~debuggerem \textsf{gdb} a vyhodnotil případné problémy
-v~programu \textsf{valgrind}. Zvolil jsem netradiční GNU coding style.
+práci s~debuggerem \textsf{gdb} a vyhodnotil případné problémy v~programu
+\textsf{valgrind}. Dokumentace byla napsána v mém oblíbeném systému
+\CS\LaTeX{}. Protože jsem dělal minimálně na dvou počítačích, verzoval jsem
+na GitHubu na adrese
+\url{https://github.com/qwertzdenek/AritmeticSolver}. Program bude dále
+veřejně dostupný pod licencí GNU GPL verze 3.
 
 \nocite{wiki:cpro}
 \nocite{pred:c}
 \bibliography{zdroje}
-\listoftables
 \end{document}
