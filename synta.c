@@ -150,6 +150,11 @@ int bigeq(int a, int b)
   return a >= b;
 }
 
+int zero(int a, int b)
+{
+  return 0;
+}
+
 // Vrátí ukazatel na paritní závorku, nebo na
 // poslední znak.
 char *parite(char *ptr)
@@ -420,9 +425,9 @@ void komp(char *res)
 void vyraz(char *out)
 {
   atom act;
-  int res;
+  int res = 0;
   bool bres = true;
-  int (*op)(int, int);
+  int (*op)(int, int) = zero;
   int type = UNKN;
   char buf[20];
   
