@@ -10,6 +10,8 @@
 
 #define FUNS_COUNT 11
 
+extern char error_message[64];
+
 typedef enum
 {
     ADD, SUB, MULT, DIV, QUOTE, SET, HELP, QUIT, CAR, CDR, ABOUT
@@ -25,7 +27,6 @@ typedef struct
     };
 } atom;
 
-void print_error();
 void lexa_init(char *strin);
 int lexa_next(atom *sym);
 void lexa_get(atom *sym);

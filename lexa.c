@@ -8,8 +8,6 @@
 #include "lexa.h"
 #include "symbols.h"
 
-char error_message[64];
-
 const char *funs_names[FUNS_COUNT] =
 {
     "+", "-", "*", "/", "quote", "set", "help", "quit",
@@ -18,11 +16,6 @@ const char *funs_names[FUNS_COUNT] =
 
 static char *ptr = NULL;
 static atom csym;
-
-void print_error()
-{
-    fprintf(stderr, error_message);
-}
 
 int is_operator(char o)
 {

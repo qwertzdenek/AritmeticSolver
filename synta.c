@@ -415,12 +415,6 @@ void komp(char *res)
             }
         }
     }
-    /*
-      else if (act.type = AT_UNKNOWN)
-      {
-
-      }
-    */
 }
 
 void vyraz(char *out)
@@ -575,32 +569,34 @@ int start()
 {
     atom act;
     char res[128];
+    int code;
 
-    // do some initialization
-    res[0] = 'Q';
-    res[1] = 'U';
-    res[2] = 'I';
-    res[3] = 'T';
-    res[4] = 0;
-
-    lexa_next(&act);
-
-    //  printf("první znak: %d", act.type);
-
-    switch (act.type)
+    while (true)
     {
-    case AT_OPERATOR:
-        vyraz(res);
-        break;
-    default:
-        komp(res);
-        if (equals(res, qt, 0))
+        code = lexa_next(&act);
+        if (code == OK_CODE)
+            break;
+        else if (code == END_CODE)
+            continue;
+        else if (code == ERROR_CODE)
         {
-            return 0;
+            sprintf(error_message, "lex: %s", error_message);
+            return ERROR_CODE;
         }
-        break;
+        
+        switch (act.type)
+        {
+        case AT_LBRACKET:
+            list(res);
+            break;
+        default:
+            sprintf(error_message, "syntactic: %s", error_message);
+            return ERROR_CODE;
+        }
+
+        printf("%s\n",res);
     }
 
-    printf("%s\n",res);
-    return 1;
+    return OK_CODE;
 }
+

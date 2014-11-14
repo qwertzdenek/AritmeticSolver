@@ -1,7 +1,9 @@
 #ifndef _SYNTA_H
 #define _SYNTA_H
 
-char *parite(char *ptr);
+extern char error_message[64];
+
 int start();
 
 #endif
+

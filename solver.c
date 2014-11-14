@@ -28,10 +28,8 @@
 #include <string.h>
 #include <errno.h>
 
-#include "lexa.h"
 #include "synta.h"
-#include "list.h"
-#include "tools.h"
+#include "symbols.h"
 
 #define EPS 1e-6
 
@@ -40,50 +38,15 @@
 #define OPSYM_MUL 12
 #define OPSYM_DIV 13
 
-char *lineptr;
+char error_message[64];
 
-bool next_cmd(char *res)
+void print_error()
 {
-    char *sptr;
-
-    // přeskočit bílé znaky
-    while (isspace(*lineptr))
-        lineptr++;
-
-    // konec řetězce
-    if (*lineptr == 0)
-        return false;
-
-    //  printf("start: %c\n", *lineptr);
-
-    sptr = lineptr;
-
-    if (*sptr == '(')
-    {
-        lineptr = parite(sptr);
-        lineptr++;
-    }
-    else if (*sptr == '\'')
-    {
-        lineptr = parite(sptr + 1);
-        lineptr++;
-    }
-    else
-    {
-        while (!isspace(*lineptr) && *lineptr != 0)
-            lineptr++;
-    }
-
-    memcpy(res, sptr, lineptr - sptr);
-    *(res + (lineptr - sptr)) = 0;
-
-    //  printf("end: %c\n", *lineptr);
-
-    return true;
+    fprintf(stderr, error_message);
 }
 
 // Pro čtení ze souboru
-void readl(FILE *f, char *l)
+void readfile(FILE *f, char *l)
 {
     int c;
     char *ptr = l;
@@ -99,43 +62,24 @@ void readl(FILE *f, char *l)
     *ptr = 0;
 }
 
-
-bool has_next_line(FILE *f)
-{
-    int c;
-    bool res;
-
-    c = fgetc(f);
-
-    if ((c != 10 && c != 13) && c != EOF)
-        res = true;
-    else
-        res = false;
-
-    fseek(f, -1, SEEK_CUR);
-    return res;
-}
-
 int main(int argc, char *argv[])
 {
-    char l[100];
+    char l[2048];
     // atom sym;
-    int dalsi = 1;
-    char *file;
+    int res;
     bool inter = 0;
     FILE *source;
-    int counterFile = 0;
     int counter = 0;
-    char cmd[64];
+
+    atexit(cleanup);
 
     if (argc > 1)
     {
         file = argv[1];
-        errno = 0;
         source = fopen(file, "r");
         if (source == NULL)
         {
-            printf("Error \"%s\" opening file!\n", strerror(errno));
+            perror(argv[1])
             return EXIT_FAILURE;
         }
     }
@@ -145,11 +89,8 @@ int main(int argc, char *argv[])
         inter = 1;
     }
 
-    atexit(cleanup);
-
-    do
+    while (1)
     {
-        counter++;
         if (inter)
         {
             printf("[%d]> ",counter);
@@ -157,26 +98,22 @@ int main(int argc, char *argv[])
         }
         else
         {
-            readl(source, l);
+            // TODO: read whole file
+            readfile(source, l);
         }
 
-        lineptr = l;
-
-        while (next_cmd(cmd))
-        {
-            counterFile++;
-            lexa_init(cmd);
-            if (!inter)
-                printf("[%d]> %s\n", counterFile, cmd);
-            dalsi = start();
-        }
-
-        if (!inter)
-        {
-            dalsi = has_next_line(source);
-        }
+        lexa_init(l);
+        res = start();
+        
+        counter++;
+        
+        if (res == OK_CODE)
+            continue;
+        else if (res == END_CODE)
+            break;
+        else if (res == ERROR_CODE)
+            print_error()
     }
-    while (dalsi > 0);
 
     printf("Bye.\n");
 
