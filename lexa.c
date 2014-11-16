@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "list.h"
 #include "lexa.h"
 #include "symbols.h"
 
@@ -14,7 +13,8 @@ const char *funs_names[FUNS_COUNT] =
     "car", "cdr", "about"
 };
 
-static char *ptr = NULL;
+char lchar;
+FILE *file;
 static atom csym;
 
 int is_operator(char o)
@@ -27,11 +27,11 @@ int is_operator(char o)
 }
 
 // Připravý syntaktický analyzátor na nový řetězec.
-void lexa_init(char *strin)
+void lexa_init(FILE *stream)
 {
-    assert(strin);
-    ptr = strin;
-    memset(&csym, 0, sizeof(atom));
+    assert(stream);
+    file = stream;
+    lchar = 0;
 }
 
 // Pouze vrací aktuálně zpracovaný symbol.
@@ -41,7 +41,7 @@ void lexa_get(atom *sym)
     memcpy(sym, &csym, sizeof(atom));
 }
 
-void write_atom_fce(atom *sym, funs_types type)
+void write_atom_fce(atom *sym, enum ftype type)
 {
     sym->type = AT_FCE;
     sym->value = type;
@@ -65,118 +65,115 @@ int lexa_next(atom *sym)
 {
     int ival;
     int i, j;
-
-    char *tptr;
+    char buf[32];
+    char *ptr;
 
     if (sym == NULL)
     {
-        sprintf(error_message, "internal error");
+        sprintf(error_message, "internal error\n");
         return ERROR_CODE;
     }
 
     // přeskočit bílé znaky
-    while (isspace(*ptr))
-        ptr++;
+    while (isspace(lchar = fgetc(file)))
+        ;
 
     // konec řetězce
-    if (*ptr == 0)
+    if (lchar == EOF)
         return END_CODE;
 
-    if (isdigit(*ptr))
+    if (isdigit(lchar))
     {
-        ival = (int) strtol(ptr, &ptr, 10);
-        if (!isspace(*ptr))
+        // we already have one character
+        buf[0] = lchar;
+        ptr = (char *) (buf + 1);
+        while (isdigit(lchar = fgetc(file)))
+            *ptr++ = lchar;
+        *ptr = 0;
+
+        if (!isspace(lchar) && (lchar != '(') && (lchar != '('))
         {
-            sprintf(error_message, "invalid number");
+            sprintf(error_message, "invalid number\n");
             return ERROR_CODE;
         }
+        ival = (int) strtol((char *) buf, NULL, 10);
+
         write_atom_num(&csym, ival);
     }
-    else if (*ptr == '(')
+    else if (lchar == '(')
     {
         csym.type = AT_LBRACKET;
-        ptr++;
+        lchar = fgetc(file);
     }
-    else if (*ptr == ')')
+    else if (lchar == ')')
     {
         csym.type = AT_RBRACKET;
-        ptr++;
+        lchar = fgetc(file);
     }
-    else if (isalpha(*ptr) || is_operator(*ptr) || *ptr == '_')
+    else if (isalpha(lchar) || is_operator(lchar) || lchar == '_')
     {
+        buf[0] = lchar;
+        ptr = (char *) (buf + 1);
+        while (isalpha(lchar = fgetc(file)) || is_operator(lchar) || isdigit(lchar))
+            *ptr++ = lchar;
+        *ptr = 0;
+
+        // unary operator
+        if ((buf[0] == '+' || buf[0] == '-') && isdigit(buf[1]))
+        {
+            ival = (int) strtol((char *) buf, &ptr, 10);
+            if (*ptr != 0)
+            {
+                sprintf(error_message, "invalid number\n");
+                return ERROR_CODE;
+            }
+            write_atom_num(&csym, ival);
+
+            memcpy(sym, &csym, sizeof(atom));
+            return OK_CODE;
+        }
+
         // is it function?
         for (i = 0; i < FUNS_COUNT; i++)
         {
-            tptr = ptr;
+            ptr = (char *) buf;
             j = 0;
-            while (funs_names[i][j] && tolower(*tptr) == funs_names[i][j])
+            while (funs_names[i][j] && tolower(*ptr) == funs_names[i][j])
             {
-                tptr++;
+                ptr++;
                 j++;
             }
 
             if (funs_names[i][j] == 0)
             {
                 write_atom_fce(&csym, i);
-                ptr = tptr;
 
                 memcpy(sym, &csym, sizeof(atom));
                 return OK_CODE;
             }
         }
 
-        // unary operator
-        if (*ptr == '+' && isdigit(*(ptr+1)))
-        {
-            ival = (int) strtol(ptr, &ptr, 10);
-            if (!isspace(*ptr))
-            {
-                sprintf(error_message, "invalid number");
-                return ERROR_CODE;
-            }
-            write_atom_num(&csym, ival);
-        }
-        else if (*ptr == '-' && isdigit(*(ptr+1)))
-        {
-            ival = (int) strtol(ptr, &ptr, 10);
-            if (!isspace(*ptr))
-            {
-                sprintf(error_message, "invalid number");
-                return ERROR_CODE;
-            }
-            write_atom_num(&csym, -ival);
-        }
-        else
-        {
-            while (!isspace(*ptr))
-                ptr++;
+        // create string from the name
+        write_atom_var(&csym, buf);
 
-            // create string from the name
-            memcpy(error_message, tptr, ptr - tptr);
-            *(error_message + (ptr - tptr)) = 0;
-            write_atom_var(&csym, error_message);
-
-            // clear string
-            error_message[0] = 0;
-
-            // Převést na Uppercase
-            i = 0;
-            while (csym.string[i])
-            {
-                csym.string[i] = toupper(csym.string[i]);
-                i++;
-            }
+        // Převést na Uppercase
+        i = 0;
+        while (csym.string[i])
+        {
+            csym.string[i] = toupper(csym.string[i]);
+            i++;
         }
     }
     else
     {
-        tptr = ptr;
-        while (!isspace(*ptr))
-            ptr++;
+        buf[0] = lchar;
+        ptr = (char *) (buf + 1);
 
-        ival = ptr - tptr;
-        memcpy(csym.string, tptr, ival);
-        *(csym.string + ival) = 0;
+        while (!isspace(lchar = fgetc(file)) && lchar != '(' && lchar != ')')
+            *ptr++ = lchar;
+        *ptr = 0;
+
+        strcpy(csym.string, buf);
         csym.type = AT_UNKNOWN;
     }
 

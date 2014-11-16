@@ -12,10 +12,10 @@
 
 extern char error_message[64];
 
-typedef enum
+enum ftype
 {
     ADD, SUB, MULT, DIV, QUOTE, SET, HELP, QUIT, CAR, CDR, ABOUT
-} funs_types;
+};
 
 typedef struct
 {
@@ -27,7 +27,7 @@ typedef struct
     };
 } atom;
 
-void lexa_init(char *strin);
+void lexa_init(FILE *file);
 int lexa_next(atom *sym);
 void lexa_get(atom *sym);
 

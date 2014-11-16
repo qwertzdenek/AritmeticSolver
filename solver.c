@@ -29,6 +29,7 @@
 #include <errno.h>
 
 #include "synta.h"
+#include "lexa.h"
 #include "symbols.h"
 
 #define EPS 1e-6
@@ -51,12 +52,9 @@ void readfile(FILE *f, char *l)
     int c;
     char *ptr = l;
 
-    c = fgetc(f);
-
-    while (c != 10 && c != 13 && c != EOF)
+    while ((c = fgetc(f)) != EOF)
     {
         *ptr++ = (char) c;
-        c = fgetc(f);
     }
 
     *ptr = 0;
@@ -65,54 +63,49 @@ void readfile(FILE *f, char *l)
 int main(int argc, char *argv[])
 {
     char l[2048];
-    // atom sym;
     int res;
-    bool inter = 0;
+    int inter = 0;
     FILE *source;
     int counter = 0;
 
-    atexit(cleanup);
-
     if (argc > 1)
     {
-        file = argv[1];
-        source = fopen(file, "r");
+        source = fopen(argv[1], "r");
         if (source == NULL)
         {
-            perror(argv[1])
+            perror(argv[1]);
             return EXIT_FAILURE;
         }
     }
     else
     {
-        file = NULL;
+        source = stdin;
         inter = 1;
     }
+
+    lexa_init(source);
 
     while (1)
     {
         if (inter)
         {
             printf("[%d]> ",counter);
-            fgets(l, 100, stdin);
         }
         else
         {
-            // TODO: read whole file
             readfile(source, l);
         }
 
-        lexa_init(l);
         res = start();
-        
+
         counter++;
-        
+
         if (res == OK_CODE)
             continue;
         else if (res == END_CODE)
             break;
         else if (res == ERROR_CODE)
-            print_error()
+            print_error();
     }
 
     printf("Bye.\n");
