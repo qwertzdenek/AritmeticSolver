@@ -13,6 +13,8 @@
 char *nil = "NIL";
 char *t = "T";
 
+int list(char *out);
+
 int addii(int a, int b)
 {
     return a + b;
@@ -70,7 +72,25 @@ int zero(int a, int b)
 
 int arg(char *res)
 {
-    sprintf(res, "%d", 1);
+    atom act;
+
+    lexa_get(&act);
+
+    switch (act.type)
+    {
+    case AT_LBRACKET:
+        list(res);
+        break;
+    case AT_VAR:
+        strcpy(res, act.string);
+        break;
+    case AT_NUM:
+        sprintf(res, "%d", act.value);
+        break;
+    case AT_RBRACKET:
+        return END_CODE;
+    }
+
     return OK_CODE;
 }
 
@@ -79,56 +99,80 @@ int list_in(char *res)
     atom act;
     int code = END_CODE;
     int (*op)(int, int) = zero;
-    int ares;
+    int ares = 0;
     int bres;
     int type;
     char val[20];
 
-    if (lexa_next(&act) == ERROR_CODE)
-        return ERROR_CODE;
+    lexa_get(&act);
 
-    if (act.type != AT_FCE)
+    if (act.type == AT_RBRACKET)
+    {
+        strcpy(res, nil);
+        return OK_CODE;
+    }
+    else if (act.type != AT_FCE)
     {
         sprintf(error_message, "syntax error\n");
         return ERROR_CODE;
     }
-    else if (act.type == AT_RBRACKET)
-    {
-        strcpy(res, nil);
-        return END_CODE;
-    }
 
-    switch (act.value)
+  switch (act.value)
     {
     case ADD:
         op = addii;
         ares = 0;
         type = ARIT;
         break;
-    default:
-        printf("Not implemented\n");
-    }
-
-    if (act.value == QUIT)
-    {
+    case SUB:
+        op = subii;
+        type = ARIT;
+        lexa_next(&act);
+        if (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
+        {
+            arg(val);
+            ares = strtol(val, NULL, 10);
+        }
+        else
+        {
+            sprintf(error_message, "syntax error\n");
+            return ERROR_CODE;
+        }
+        break;
+    case MULT:
+        op = mulii;
+        ares = 1;
+        type = ARIT;
+        break;
+    case DIV:
+        op = divii;
+        type = ARIT;
+        lexa_next(&act);
+        if (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
+        {
+            arg(val);
+            ares = strtol(val, NULL, 10);
+        }
+        else
+        {
+            sprintf(error_message, "syntax error\n");
+            return ERROR_CODE;
+        }
+        break;
+    case QUOTE:
+            sprintf(error_message, "not implemented\n");
+            return ERROR_CODE;
+        break;
+    case QUIT:
         lexa_next(&act);
         return END_CODE;
-    }
-
-    lexa_next(&act);
-    if (act.type == AT_RBRACKET)
-    {
-        strcpy(res, nil);
-        return END_CODE;
-    }
-    if (act.type == AT_UNKNOWN)
-    {
-        sprintf(error_message, "unknown symbol error\n");
+    default:
+        sprintf(error_message, "Not implemented\n");
         return ERROR_CODE;
     }
 
-    while (act.type == AT_VAR || act.type == AT_NUM
-            || act.type == AT_LBRACKET)
+    while (lexa_next(&act) && (act.type == AT_VAR || act.type == AT_NUM
+            || act.type == AT_LBRACKET))
     {
         if (type == ARIT)
         {
@@ -141,8 +185,8 @@ int list_in(char *res)
             bres &= op(bres, strtol(val, NULL, 10));
         }
 
-        if (lexa_next(&act) == END_CODE || code == END_CODE)
-            return END_CODE;
+        if (code == END_CODE)
+            break;
     }
 
     if (type == ARIT)
@@ -169,7 +213,11 @@ int list(char *out)
         return ERROR_CODE;
     }
 
+    lexa_next(&act);
     code = list_in(out);
+
+    if (code == ERROR_CODE)
+        return ERROR_CODE;
 
     lexa_get(&act);
     if (act.type != AT_RBRACKET)
@@ -178,12 +226,10 @@ int list(char *out)
         return ERROR_CODE;
     }
 
-    if (code == ERROR_CODE)
-        return ERROR_CODE;
-    else if (code == END_CODE)
+    if (code == END_CODE)
         return END_CODE;
-
-    return OK_CODE;
+    else
+        return OK_CODE;
 }
 
 int start()
@@ -192,25 +238,24 @@ int start()
     char res[128];
     int code;
 
-    while (1)
+    code = lexa_next(&act);
+    if (code == END_CODE)
+        return END_CODE;
+    else if (code == ERROR_CODE)
     {
-        code = lexa_next(&act);
-        if (code == END_CODE)
-            return END_CODE;
-        else if (code == ERROR_CODE)
-        {
-            //sprintf(error_message, "lex: %s\n", error_message);
-            return ERROR_CODE;
-        }
+           //sprintf(error_message, "lex: %s\n", error_message);
+        return ERROR_CODE;
+    }
 
-        code = list(res);
-        if (code == END_CODE)
-            return END_CODE;
-        else if (code == ERROR_CODE)
-        {
-            //sprintf(error_message, "syntax error: %s\n", error_message);
-            return ERROR_CODE;
-        }
+    code = list(res);
+    if (code == OK_CODE)
+        printf("%s\n", res);
+    else if (code == END_CODE)
+        return END_CODE;
+    else if (code == ERROR_CODE)
+    {
+        //sprintf(error_message, "syntax error: %s\n", error_message);
+        return ERROR_CODE;
     }
 
     return OK_CODE;

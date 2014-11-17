@@ -31,7 +31,7 @@ void lexa_init(FILE *stream)
 {
     assert(stream);
     file = stream;
-    lchar = 0;
+    lchar = ' ';
 }
 
 // Pouze vrací aktuálně zpracovaný symbol.
@@ -75,8 +75,8 @@ int lexa_next(atom *sym)
     }
 
     // přeskočit bílé znaky
-    while (isspace(lchar = fgetc(file)))
-        ;
+    while (isspace(lchar))
+        lchar = fgetc(file);
 
     // konec řetězce
     if (lchar == EOF)
@@ -91,7 +91,7 @@ int lexa_next(atom *sym)
             *ptr++ = lchar;
         *ptr = 0;
 
-        if (!isspace(lchar) && (lchar != '(') && (lchar != '('))
+        if (isspace(lchar) && (lchar == '(') && (lchar == ')'))
         {
             sprintf(error_message, "invalid number\n");
             return ERROR_CODE;
