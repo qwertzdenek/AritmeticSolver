@@ -31,6 +31,7 @@
 #include "synta.h"
 #include "lexa.h"
 #include "symbols.h"
+#include "list.h"
 
 #define EPS 1e-6
 
@@ -112,6 +113,9 @@ int main(int argc, char *argv[])
 
     if (!inter)
         fclose(source);
+
+    // clean variable list
+    cleanup();
 
     return EXIT_SUCCESS;
 }

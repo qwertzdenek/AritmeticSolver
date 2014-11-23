@@ -68,12 +68,6 @@ int lexa_next(atom *sym)
     char buf[32];
     char *ptr;
 
-    if (sym == NULL)
-    {
-        sprintf(error_message, "internal error\n");
-        return ERROR_CODE;
-    }
-
     // přeskočit bílé znaky
     while (isspace(lchar))
         lchar = fgetc(file);
@@ -129,7 +123,8 @@ int lexa_next(atom *sym)
             }
             write_atom_num(&csym, ival);
 
-            memcpy(sym, &csym, sizeof(atom));
+            if (sym != NULL)
+                memcpy(sym, &csym, sizeof(atom));
             return OK_CODE;
         }
 
@@ -148,7 +143,8 @@ int lexa_next(atom *sym)
             {
                 write_atom_fce(&csym, i);
 
-                memcpy(sym, &csym, sizeof(atom));
+                if (sym != NULL)
+                    memcpy(sym, &csym, sizeof(atom));
                 return OK_CODE;
             }
         }
@@ -164,6 +160,11 @@ int lexa_next(atom *sym)
             i++;
         }
     }
+    else if (lchar == '\'')
+    {
+        write_atom_fce(&csym, QUOTE);
+        lchar = fgetc(file);
+    }
     else
     {
         buf[0] = lchar;
@@ -177,7 +178,8 @@ int lexa_next(atom *sym)
         csym.type = AT_UNKNOWN;
     }
 
-    memcpy(sym, &csym, sizeof(atom));
+    if (sym != NULL)
+        memcpy(sym, &csym, sizeof(atom));
     return OK_CODE;
 }
 

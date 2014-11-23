@@ -5,6 +5,7 @@
 
 #include "lexa.h"
 #include "symbols.h"
+#include "list.h"
 
 #define ARIT 0
 #define BOOL 1
@@ -70,6 +71,38 @@ int zero(int a, int b)
     return 0;
 }
 
+void quote_arg(char *res)
+{
+    atom act;
+
+    lexa_get(&act);
+
+    switch (act.type)
+    {
+    case AT_NUM:
+        sprintf(res, "%d", act.value);
+        break;
+    case AT_FCE:
+    case AT_VAR:
+        strcpy(res, act.string);
+        break;
+//    case AT_LBRACKET:
+//      lexa_next(&act);
+//      quote_list(res);
+//      break;
+    }
+}
+
+int quote(char *res)
+{
+    atom act;
+
+    lexa_get(&act);
+    quote_arg(res);
+
+    return OK_CODE;
+}
+
 int arg(char *res)
 {
     atom act;
@@ -103,6 +136,8 @@ int list_in(char *res)
     int bres;
     int type;
     char val[20];
+    int *var_v = NULL;
+    char *var_n = NULL;
 
     lexa_get(&act);
 
@@ -117,7 +152,7 @@ int list_in(char *res)
         return ERROR_CODE;
     }
 
-  switch (act.value)
+    switch (act.value)
     {
     case ADD:
         op = addii;
@@ -160,9 +195,32 @@ int list_in(char *res)
         }
         break;
     case QUOTE:
-            sprintf(error_message, "not implemented\n");
-            return ERROR_CODE;
+        lexa_next(&act);
+
+        quote(res);
         break;
+    case SET:
+        lexa_next(&act);
+        if (act.type == AT_FCE && *act.string == '\'')
+        {
+            arg(res);
+            var_n = (char *) malloc(strlen(res) + 1);
+            strcpy(var_n, res);
+
+            lexa_next(&act);
+            arg(res);
+            var_v = (int *) malloc(sizeof(int));
+            *var_v = strtol(res, NULL, 10);
+            push(var_v, var_n);
+        }
+        else
+        {
+            sprintf(error_message, "set argument error\n");
+            return ERROR_CODE;
+        }
+
+        lexa_next(NULL)
+        return OK_CODE;
     case QUIT:
         lexa_next(&act);
         return END_CODE;
@@ -172,7 +230,7 @@ int list_in(char *res)
     }
 
     while (lexa_next(&act) && (act.type == AT_VAR || act.type == AT_NUM
-            || act.type == AT_LBRACKET))
+                               || act.type == AT_LBRACKET))
     {
         if (type == ARIT)
         {
@@ -243,7 +301,7 @@ int start()
         return END_CODE;
     else if (code == ERROR_CODE)
     {
-           //sprintf(error_message, "lex: %s\n", error_message);
+        //sprintf(error_message, "lex: %s\n", error_message);
         return ERROR_CODE;
     }
 
