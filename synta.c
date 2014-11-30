@@ -105,23 +105,53 @@ int quote(char *res)
 
 int arg(char *res)
 {
+    int *var_v = NULL;
+    char *var_n = NULL;
+    int found;
     atom act;
 
     lexa_get(&act);
 
-    switch (act.type)
+    // only acceptable function argument is quotation
+    if (act.type == AT_FCE && act.value == QUOTE)
     {
-    case AT_LBRACKET:
-        list(res);
-        break;
-    case AT_VAR:
-        strcpy(res, act.string);
-        break;
-    case AT_NUM:
-        sprintf(res, "%d", act.value);
-        break;
-    case AT_RBRACKET:
-        return END_CODE;
+        lexa_next(&act);
+        quote(res);
+    }
+    else
+    {
+        switch (act.type)
+        {
+        case AT_LBRACKET:
+            list(res);
+            break;
+        case AT_VAR:
+            // TODO: get variable from the list
+            begin();
+            found = 0;
+            while (next(&var_v, &var_n))
+            {
+                if (strcmp(var_n, act.string) == 0)
+                {
+                    found = 1;
+                    break;
+                }
+            }
+
+            if (found)
+                sprintf(res, "%d", *var_v);
+            else
+            {
+                sprintf(error_message, "unknown variable %s\n", act.string);
+                return ERROR_CODE;
+            }
+            break;
+        case AT_NUM:
+            sprintf(res, "%d", act.value);
+            break;
+        case AT_RBRACKET:
+            return END_CODE;
+        }
     }
 
     return OK_CODE;
@@ -196,19 +226,24 @@ int list_in(char *res)
         break;
     case QUOTE:
         lexa_next(&act);
-
         quote(res);
-        break;
+        return OK_CODE;
+    case PRINT:
+        lexa_next(&act);
+        arg(res);
+        return OK_CODE;
     case SET:
         lexa_next(&act);
-        if (act.type == AT_FCE && *act.string == '\'')
+        if (act.type == AT_FCE)
         {
-            arg(res);
+            if (arg(res) == ERROR_CODE)
+                return ERROR_CODE;
             var_n = (char *) malloc(strlen(res) + 1);
             strcpy(var_n, res);
 
             lexa_next(&act);
-            arg(res);
+            if (arg(res) == ERROR_CODE)
+                return ERROR_CODE;
             var_v = (int *) malloc(sizeof(int));
             *var_v = strtol(res, NULL, 10);
             push(var_v, var_n);
@@ -219,7 +254,7 @@ int list_in(char *res)
             return ERROR_CODE;
         }
 
-        lexa_next(NULL)
+        lexa_next(NULL);
         return OK_CODE;
     case QUIT:
         lexa_next(&act);
@@ -234,12 +269,14 @@ int list_in(char *res)
     {
         if (type == ARIT)
         {
-            code = arg(val);
+            if ((code = arg(val)) == ERROR_CODE)
+                return ERROR_CODE;
             ares = op(ares, strtol(val, NULL, 10));
         }
         else if (type == BOOL)
         {
-            code = arg(val);
+            if ((code = arg(val)) == ERROR_CODE)
+                return ERROR_CODE;
             bres &= op(bres, strtol(val, NULL, 10));
         }
 

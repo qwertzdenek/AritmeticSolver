@@ -20,7 +20,7 @@ int count()
     return n;
 }
 
-bool isEmpty()
+int isEmpty()
 {
     return top == NULL;
 }
@@ -48,12 +48,12 @@ void push(int *value, char *name)
     n++;
 }
 
-bool pop(int **p_value, char **p_name)
+int pop(int **p_value, char **p_name)
 {
     node_t *tmp;
 
     if (top == NULL)
-        return false;
+        return 0;
 
     if (p_value != NULL) *p_value = top->value;
     if (p_name != NULL) *p_name = top->name;
@@ -66,7 +66,7 @@ bool pop(int **p_value, char **p_name)
     free(tmp->name);
     free(tmp);
 
-    return true;
+    return 1;
 }
 
 // nastavý začátek seznamu. Použít před začátkem
@@ -76,13 +76,13 @@ void begin()
     current = top;
 }
 
-bool next(int **p_value, char **p_name)
+int next(int **p_value, char **p_name)
 {
     if (current == NULL)
     {
         current = top;
         if (current == NULL)
-            return false;
+            return 0;
     }
 
     if (p_value != NULL) *p_value = current->value;
@@ -91,9 +91,9 @@ bool next(int **p_value, char **p_name)
     current = current->next;
 
     if (current == NULL)
-        return false;
+        return 0;
 
-    return true;
+    return 1;
 }
 
 void cleanup()

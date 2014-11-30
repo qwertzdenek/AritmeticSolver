@@ -6,11 +6,12 @@
 
 #include "lexa.h"
 #include "symbols.h"
+#include "tools.h"
 
 const char *funs_names[FUNS_COUNT] =
 {
-    "+", "-", "*", "/", "quote", "set", "help", "quit",
-    "car", "cdr", "about"
+    "+", "-", "*", "/", "QUOTE", "SET", "HELP", "QUIT",
+    "CAR", "CDR", "ABOUT", "PRINT"
 };
 
 char lchar;
@@ -133,7 +134,7 @@ int lexa_next(atom *sym)
         {
             ptr = (char *) buf;
             j = 0;
-            while (funs_names[i][j] && tolower(*ptr) == funs_names[i][j])
+            while (funs_names[i][j] && toupper(*ptr) == funs_names[i][j])
             {
                 ptr++;
                 j++;
@@ -150,15 +151,7 @@ int lexa_next(atom *sym)
         }
 
         // create string from the name
-        write_atom_var(&csym, buf);
-
-        // Převést na Uppercase
-        i = 0;
-        while (csym.string[i])
-        {
-            csym.string[i] = toupper(csym.string[i]);
-            i++;
-        }
+        write_atom_var(&csym, supper(buf));
     }
     else if (lchar == '\'')
     {

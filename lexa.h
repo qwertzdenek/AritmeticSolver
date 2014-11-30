@@ -8,13 +8,13 @@
 #define AT_RBRACKET 5
 #define AT_UNKNOWN 6
 
-#define FUNS_COUNT 11
+#define FUNS_COUNT 12
 
 extern char error_message[64];
 
 enum ftype
 {
-    ADD, SUB, MULT, DIV, QUOTE, SET, HELP, QUIT, CAR, CDR, ABOUT
+    ADD, SUB, MULT, DIV, QUOTE, SET, HELP, QUIT, CAR, CDR, ABOUT, PRINT
 };
 
 typedef struct
