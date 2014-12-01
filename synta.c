@@ -91,6 +91,8 @@ void quote_arg(char *res)
 //      quote_list(res);
 //      break;
     }
+
+    lexa_next(&act);
 }
 
 int quote(char *res)
@@ -129,6 +131,7 @@ int arg(char *res)
             // TODO: get variable from the list
             begin();
             found = 0;
+
             while (next(&var_v, &var_n))
             {
                 if (strcmp(var_n, act.string) == 0)
@@ -153,6 +156,8 @@ int arg(char *res)
             return END_CODE;
         }
     }
+
+    lexa_next(NULL);
 
     return OK_CODE;
 }
@@ -188,6 +193,7 @@ int list_in(char *res)
         op = addii;
         ares = 0;
         type = ARIT;
+        lexa_next(&act);
         break;
     case SUB:
         op = subii;
@@ -208,6 +214,7 @@ int list_in(char *res)
         op = mulii;
         ares = 1;
         type = ARIT;
+        lexa_next(&act);
         break;
     case DIV:
         op = divii;
@@ -234,14 +241,13 @@ int list_in(char *res)
         return OK_CODE;
     case SET:
         lexa_next(&act);
-        if (act.type == AT_FCE)
+        if (act.type == AT_FCE && act.value == QUOTE)
         {
             if (arg(res) == ERROR_CODE)
                 return ERROR_CODE;
             var_n = (char *) malloc(strlen(res) + 1);
             strcpy(var_n, res);
 
-            lexa_next(&act);
             if (arg(res) == ERROR_CODE)
                 return ERROR_CODE;
             var_v = (int *) malloc(sizeof(int));
@@ -254,7 +260,6 @@ int list_in(char *res)
             return ERROR_CODE;
         }
 
-        lexa_next(NULL);
         return OK_CODE;
     case QUIT:
         lexa_next(&act);
@@ -264,8 +269,7 @@ int list_in(char *res)
         return ERROR_CODE;
     }
 
-    while (lexa_next(&act) && (act.type == AT_VAR || act.type == AT_NUM
-                               || act.type == AT_LBRACKET))
+    while (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
     {
         if (type == ARIT)
         {
@@ -279,6 +283,8 @@ int list_in(char *res)
                 return ERROR_CODE;
             bres &= op(bres, strtol(val, NULL, 10));
         }
+
+        lexa_get(&act);
 
         if (code == END_CODE)
             break;

@@ -79,19 +79,12 @@ void begin()
 int next(int **p_value, char **p_name)
 {
     if (current == NULL)
-    {
-        current = top;
-        if (current == NULL)
-            return 0;
-    }
+        return 0;
 
     if (p_value != NULL) *p_value = current->value;
     if (p_name != NULL) *p_name = current->name;
 
     current = current->next;
-
-    if (current == NULL)
-        return 0;
 
     return 1;
 }
