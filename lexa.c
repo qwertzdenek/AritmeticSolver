@@ -60,6 +60,11 @@ void write_atom_num(atom *sym, int value)
     sym->value = value;
 }
 
+void write_atom_quote(atom *sym)
+{
+    sym->type = AT_QUOTE;
+}
+
 // Přesune se v řetězci na další symbol, zapíše na
 // dodanou adresu tělo struktury atom.
 int lexa_next(atom *sym)
@@ -155,7 +160,7 @@ int lexa_next(atom *sym)
     }
     else if (lchar == '\'')
     {
-        write_atom_fce(&csym, QUOTE);
+        write_atom_quote(&csym);
         lchar = fgetc(file);
     }
     else

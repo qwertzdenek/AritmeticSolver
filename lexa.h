@@ -6,7 +6,8 @@
 #define AT_NUM 3
 #define AT_LBRACKET 4
 #define AT_RBRACKET 5
-#define AT_UNKNOWN 6
+#define AT_QUOTE 6
+#define AT_UNKNOWN 7
 
 #define FUNS_COUNT 12
 

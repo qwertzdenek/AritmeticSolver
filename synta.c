@@ -92,7 +92,7 @@ void quote_arg(char *res)
 //      break;
     }
 
-    lexa_next(&act);
+    //lexa_next(NULL);
 }
 
 int quote(char *res)

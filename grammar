@@ -1,3 +1,4 @@
+START -> 'ARG | LIST
 LIST -> (LIST_IN)
 LIST_IN -> fce ARG | e
 ARG -> LIST ARG | var ARG | num ARG | e
