@@ -71,10 +71,10 @@ int zero(int a, int b)
     return 0;
 }
 
-void quote_arg(char *res)
+// zpracuje jeden quote argument
+int quote_arg_sym(char *res)
 {
     atom act;
-
     lexa_get(&act);
 
     switch (act.type)
@@ -86,26 +86,13 @@ void quote_arg(char *res)
     case AT_VAR:
         strcpy(res, act.string);
         break;
-//    case AT_LBRACKET:
-//      lexa_next(&act);
-//      quote_list(res);
-//      break;
     }
-
-    //lexa_next(NULL);
-}
-
-int quote(char *res)
-{
-    atom act;
-
-    lexa_get(&act);
-    quote_arg(res);
 
     return OK_CODE;
 }
 
-int arg(char *res)
+// argument funkce
+int arg_sym(char *res)
 {
     int *var_v = NULL;
     char *var_n = NULL;
@@ -114,58 +101,72 @@ int arg(char *res)
 
     lexa_get(&act);
 
-    // only acceptable function argument is quotation
-    if (act.type == AT_FCE && act.value == QUOTE)
+    switch (act.type)
     {
-        lexa_next(&act);
-        quote(res);
-    }
-    else
-    {
-        switch (act.type)
+    case AT_LBRACKET:
+        list(res);
+        break;
+    case AT_VAR:
+        // TODO: get variable from the list
+        begin();
+        found = 0;
+
+        while (next(&var_v, &var_n))
         {
-        case AT_LBRACKET:
-            list(res);
-            break;
-        case AT_VAR:
-            // TODO: get variable from the list
-            begin();
-            found = 0;
-
-            while (next(&var_v, &var_n))
+            if (strcmp(var_n, act.string) == 0)
             {
-                if (strcmp(var_n, act.string) == 0)
-                {
-                    found = 1;
-                    break;
-                }
+                found = 1;
+                break;
             }
-
-            if (found)
-                sprintf(res, "%d", *var_v);
-            else
-            {
-                sprintf(error_message, "unknown variable %s\n", act.string);
-                return ERROR_CODE;
-            }
-            break;
-        case AT_NUM:
-            sprintf(res, "%d", act.value);
-            break;
-        case AT_RBRACKET:
-            return END_CODE;
         }
-    }
 
-    lexa_next(NULL);
+        if (found)
+            sprintf(res, "%d", *var_v);
+        else
+        {
+            sprintf(error_message, "unknown variable %s\n", act.string);
+            return ERROR_CODE;
+        }
+        break;
+    case AT_NUM:
+        sprintf(res, "%d", act.value);
+        break;
+    case AT_RBRACKET:
+        return END_CODE;
+    }
 
     return OK_CODE;
 }
 
+int arg(char *res)
+{
+    // if arg_sym or quote_arg_sym
+    atom act;
+    lexa_get(&act);
+
+    switch (act.type)
+    {
+    case AT_LBRACKET:
+    case AT_NUM:
+    case AT_VAR:
+        arg_sym(res);
+        break;
+    case AT_QUOTE:
+        lexa_next(&act);
+        quote_arg_sym(res);
+        break;
+    default:
+        sprintf(error_message, "syntax error\n");
+        return ERROR_CODE;
+    }
+
+    return OK_CODE;
+}
+
+// uvnitř seznamu
 int list_in(char *res)
 {
     atom act;
-    int code = END_CODE;
     int (*op)(int, int) = zero;
     int ares = 0;
     int bres;
@@ -193,7 +194,6 @@ int list_in(char *res)
         op = addii;
         ares = 0;
         type = ARIT;
-        lexa_next(&act);
         break;
     case SUB:
         op = subii;
@@ -214,7 +214,6 @@ int list_in(char *res)
         op = mulii;
         ares = 1;
         type = ARIT;
-        lexa_next(&act);
         break;
     case DIV:
         op = divii;
@@ -232,22 +231,25 @@ int list_in(char *res)
         }
         break;
     case QUOTE:
-        lexa_next(&act);
-        quote(res);
+        lexa_next(NULL);
+        quote_arg_sym(res);
+        lexa_next(NULL);
         return OK_CODE;
     case PRINT:
-        lexa_next(&act);
+        lexa_next(NULL);
         arg(res);
+        lexa_next(NULL);
         return OK_CODE;
     case SET:
         lexa_next(&act);
-        if (act.type == AT_FCE && act.value == QUOTE)
+        if (act.type == AT_QUOTE)
         {
             if (arg(res) == ERROR_CODE)
                 return ERROR_CODE;
             var_n = (char *) malloc(strlen(res) + 1);
             strcpy(var_n, res);
 
+            lexa_next(NULL);
             if (arg(res) == ERROR_CODE)
                 return ERROR_CODE;
             var_v = (int *) malloc(sizeof(int));
@@ -260,33 +262,34 @@ int list_in(char *res)
             return ERROR_CODE;
         }
 
+        lexa_next(NULL);
         return OK_CODE;
     case QUIT:
-        lexa_next(&act);
+        lexa_next(NULL);
         return END_CODE;
     default:
-        sprintf(error_message, "Not implemented\n");
+        sprintf(error_message, "Not implemented function\n");
         return ERROR_CODE;
     }
+
+    lexa_next(&act);
 
     while (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
     {
         if (type == ARIT)
         {
-            if ((code = arg(val)) == ERROR_CODE)
+            if (arg(val) == ERROR_CODE)
                 return ERROR_CODE;
             ares = op(ares, strtol(val, NULL, 10));
         }
         else if (type == BOOL)
         {
-            if ((code = arg(val)) == ERROR_CODE)
+            if (arg(val) == ERROR_CODE)
                 return ERROR_CODE;
             bres &= op(bres, strtol(val, NULL, 10));
         }
 
-        lexa_get(&act);
-
-        if (code == END_CODE)
+        if (lexa_next(&act) == END_CODE)
             break;
     }
 
@@ -302,6 +305,7 @@ int list_in(char *res)
     return OK_CODE;
 }
 
+// seznam (ošetřuje závorky)
 int list(char *out)
 {
     atom act;
@@ -333,6 +337,7 @@ int list(char *out)
         return OK_CODE;
 }
 
+// vyhodnotí seznam nebo squote
 int start()
 {
     atom act;
@@ -344,20 +349,24 @@ int start()
         return END_CODE;
     else if (code == ERROR_CODE)
     {
-        //sprintf(error_message, "lex: %s\n", error_message);
+        sprintf(error_message, "lex error\n");
         return ERROR_CODE;
     }
 
-    code = list(res);
+    if (act.type == AT_LBRACKET)
+        code = list(res);
+    else if (act.type == AT_QUOTE)
+    {
+        lexa_next(&act);
+        code = quote_arg_sym(res);
+    }
+
     if (code == OK_CODE)
         printf("%s\n", res);
     else if (code == END_CODE)
         return END_CODE;
     else if (code == ERROR_CODE)
-    {
-        //sprintf(error_message, "syntax error: %s\n", error_message);
         return ERROR_CODE;
-    }
 
     return OK_CODE;
 }

@@ -1,5 +1,6 @@
-START -> 'ARG | LIST
+START -> LIST | 'ARG_SYM
 LIST -> (LIST_IN)
 LIST_IN -> fce ARG | e
-ARG -> LIST ARG | var ARG | num ARG | e
+ARG -> ARG_SYM ARG | 'ARG_SYM ARG | e
+ARG_SYM -> LIST | var | num
 

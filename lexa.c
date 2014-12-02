@@ -114,7 +114,7 @@ int lexa_next(atom *sym)
     {
         buf[0] = lchar;
         ptr = (char *) (buf + 1);
-        while (isalpha(lchar = fgetc(file)) || is_operator(lchar) || isdigit(lchar))
+        while (isalpha(lchar = fgetc(file)) || is_operator(lchar) || isdigit(lchar) || lchar == '_')
             *ptr++ = lchar;
         *ptr = 0;
 
