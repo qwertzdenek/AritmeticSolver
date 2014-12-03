@@ -15,6 +15,7 @@ char *nil = "NIL";
 char *t = "T";
 
 int list(char *out);
+int quote_arg_sym(char *res);
 
 int addii(int a, int b)
 {
@@ -71,6 +72,32 @@ int zero(int a, int b)
     return 0;
 }
 
+int quote_list(char *res)
+{
+    atom act;
+    char tmp[32];
+    char *ptr = res;
+
+    *ptr++ = '(';
+
+    lexa_next(&act);
+
+    while (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET || act.type == AT_QUOTE)
+    {
+        quote_arg_sym(tmp);
+        *ptr++ = ' ';
+        strcpy(ptr, tmp);
+        ptr += strlen(tmp);
+
+        if (lexa_next(&act) == END_CODE)
+            break;
+    }
+
+    *ptr = ')';
+
+    return OK_CODE;
+}
+
 // zpracuje jeden quote argument
 int quote_arg_sym(char *res)
 {
@@ -85,6 +112,14 @@ int quote_arg_sym(char *res)
     case AT_FCE:
     case AT_VAR:
         strcpy(res, act.string);
+        break;
+    case AT_LBRACKET:
+        quote_list(res);
+        break;
+    case AT_QUOTE:
+        *res = '\'';
+        lexa_next(NULL);
+        quote_arg_sym(res + 1);
         break;
     }
 
@@ -274,7 +309,7 @@ int list_in(char *res)
 
     lexa_next(&act);
 
-    while (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
+    while (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET || act.type == AT_QUOTE)
     {
         if (type == ARIT)
         {
@@ -344,6 +379,10 @@ int start()
     char res[128];
     int code;
 
+    #ifdef __linux__
+    lexa_flush();
+    #endif // __linux__
+
     code = lexa_next(&act);
     if (code == END_CODE)
         return END_CODE;
@@ -353,13 +392,13 @@ int start()
         return ERROR_CODE;
     }
 
-    if (act.type == AT_LBRACKET)
-        code = list(res);
-    else if (act.type == AT_QUOTE)
+    if (act.type == AT_QUOTE)
     {
         lexa_next(&act);
         code = quote_arg_sym(res);
     }
+    else
+        code = list(res);
 
     if (code == OK_CODE)
         printf("%s\n", res);

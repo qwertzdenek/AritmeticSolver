@@ -4,6 +4,10 @@
 #include <assert.h>
 #include <stdio.h>
 
+#ifdef __linux__
+#include <stdio_ext.h>
+#endif // __linux__
+
 #include "lexa.h"
 #include "symbols.h"
 #include "tools.h"
@@ -34,6 +38,13 @@ void lexa_init(FILE *stream)
     file = stream;
     lchar = ' ';
 }
+
+#ifdef __linux__
+void lexa_flush()
+{
+    __fpurge(file);
+}
+#endif // __linux__
 
 // Pouze vrací aktuálně zpracovaný symbol.
 void lexa_get(atom *sym)
