@@ -32,6 +32,6 @@ void lexa_init(FILE *file);
 int lexa_next(atom *sym);
 void lexa_get(atom *sym);
 void lexa_flush();
+const char *get_function_name(int id);
 
 #endif
-

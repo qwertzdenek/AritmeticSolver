@@ -46,6 +46,11 @@ void lexa_flush()
 }
 #endif // __linux__
 
+const char *get_function_name(int id)
+{
+    return funs_names[id];
+}
+
 // Pouze vrací aktuálně zpracovaný symbol.
 void lexa_get(atom *sym)
 {
@@ -156,7 +161,7 @@ int lexa_next(atom *sym)
                 j++;
             }
 
-            if (funs_names[i][j] == 0)
+            if (*ptr == 0 && funs_names[i][j] == 0)
             {
                 write_atom_fce(&csym, i);
 

@@ -82,7 +82,7 @@ int quote_list(char *res)
 
     lexa_next(&act);
 
-    while (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET || act.type == AT_QUOTE)
+    while (act.type == AT_FCE || act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET || act.type == AT_QUOTE)
     {
         quote_arg_sym(tmp);
         *ptr++ = ' ';
@@ -93,7 +93,8 @@ int quote_list(char *res)
             break;
     }
 
-    *ptr = ')';
+    *ptr++ = ')';
+    *ptr = 0;
 
     return OK_CODE;
 }
@@ -110,6 +111,8 @@ int quote_arg_sym(char *res)
         sprintf(res, "%d", act.value);
         break;
     case AT_FCE:
+        strcpy(res, get_function_name(act.value));
+        break;
     case AT_VAR:
         strcpy(res, act.string);
         break;
