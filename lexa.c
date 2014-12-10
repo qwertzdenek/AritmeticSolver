@@ -15,11 +15,11 @@
 const char *funs_names[FUNS_COUNT] =
 {
     "+", "-", "*", "/", "QUOTE", "SET", "HELP", "QUIT",
-    "CAR", "CDR", "ABOUT", "PRINT"
+    "CAR", "CDR", "ABOUT", "PRINT", "DEFUN"
 };
 
 char lchar;
-FILE *file;
+FILE *file = NULL;
 static atom csym;
 
 int is_operator(char o)
@@ -31,17 +31,26 @@ int is_operator(char o)
         return END_CODE;
 }
 
-// Připravý syntaktický analyzátor na nový řetězec.
-void lexa_init(FILE *stream)
+// sets new stream and return old
+lexa_state lexa_init(lexa_state *s)
 {
-    assert(stream);
-    file = stream;
-    lchar = ' ';
+    lexa_state state;
+
+    state.stream = file;
+    state.lchar = lchar;
+    state.csym = csym;
+
+    if (s != NULL) file = s->stream;
+    if (s != NULL) lchar = s->lchar;
+    if (s != NULL) csym = s->csym;
+
+    return state;
 }
 
 #ifdef __linux__
 void lexa_flush()
 {
+    lchar = ' ';
     __fpurge(file);
 }
 #endif // __linux__
@@ -126,11 +135,11 @@ int lexa_next(atom *sym)
         csym.type = AT_RBRACKET;
         lchar = fgetc(file);
     }
-    else if (isalpha(lchar) || is_operator(lchar) || lchar == '_')
+    else if (isalpha(lchar) || is_operator(lchar) || lchar == '_' || lchar == '#')
     {
         buf[0] = lchar;
         ptr = (char *) (buf + 1);
-        while (isalpha(lchar = fgetc(file)) || is_operator(lchar) || isdigit(lchar) || lchar == '_')
+        while (isalpha(lchar = fgetc(file)) || is_operator(lchar) || isdigit(lchar) || lchar == '_' || lchar == '#')
             *ptr++ = lchar;
         *ptr = 0;
 

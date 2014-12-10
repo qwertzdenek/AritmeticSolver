@@ -9,13 +9,11 @@
 #define AT_QUOTE 6
 #define AT_UNKNOWN 7
 
-#define FUNS_COUNT 12
-
-extern char error_message[64];
+#define FUNS_COUNT 13
 
 enum ftype
 {
-    ADD, SUB, MULT, DIV, QUOTE, SET, HELP, QUIT, CAR, CDR, ABOUT, PRINT
+    ADD, SUB, MULT, DIV, QUOTE, SET, HELP, QUIT, CAR, CDR, ABOUT, PRINT, DEFUN
 };
 
 typedef struct
@@ -28,7 +26,14 @@ typedef struct
     };
 } atom;
 
-void lexa_init(FILE *file);
+typedef struct
+{
+    char lchar;
+    FILE *stream;
+    atom csym;
+} lexa_state;
+
+lexa_state lexa_init(lexa_state *s);
 int lexa_next(atom *sym);
 void lexa_get(atom *sym);
 void lexa_flush();

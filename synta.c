@@ -6,6 +6,7 @@
 #include "lexa.h"
 #include "symbols.h"
 #include "list.h"
+#include "tools.h"
 
 #define ARIT 0
 #define BOOL 1
@@ -16,6 +17,8 @@ char *t = "T";
 
 int list(char *out);
 int quote_arg_sym(char *res);
+int call_sub(char *res);
+int arg_sym(char *res);
 
 int addii(int a, int b)
 {
@@ -72,11 +75,76 @@ int zero(int a, int b)
     return 0;
 }
 
+int get_var(char *name, member_t *res, char **stored_name)
+{
+    member_t *var_v;
+    char *var_n = NULL;
+    int found = 0;
+
+    begin();
+
+    while (next(&var_v, &var_n))
+    {
+        if (strcmp(var_n, name) == 0)
+        {
+            if (stored_name != NULL) *stored_name = var_n;
+            found = 1;
+            break;
+        }
+    }
+
+    if (found)
+        memcpy(res, var_v, sizeof(member_t));
+    else
+    {
+        sprintf(error_message, "unknown variable %s\n", name);
+        return ERROR_CODE;
+    }
+
+    return OK_CODE;
+}
+
+int get_num_list(int **res, int *cres)
+{
+    int i;
+    char tmp[16];
+    atom act;
+    member_t *mem;
+
+    *cres = 0;
+    lexa_next(&act);
+
+    while (act.type == AT_VAR || act.type == AT_NUM)
+    {
+        *cres = *cres + 1;
+        arg_sym(tmp);
+
+        // parse number
+        mem = (member_t *) malloc(sizeof(member_t));
+        mem->value = (int) strtol((char *) tmp, NULL, 10);
+        push(mem, NULL);
+        if (lexa_next(&act) == END_CODE)
+            break;
+    }
+
+    // load variables to res
+    *res = (int *) malloc(*cres * sizeof(int));
+    for (i = 0; i < *cres; i++)
+    {
+        pop(&mem, NULL);
+        (*res)[i] = mem->value;
+        free(mem);
+    }
+
+    return OK_CODE;
+}
+
 int quote_list(char *res)
 {
     atom act;
     char tmp[32];
     char *ptr = res;
+    int first = 1;
 
     *ptr++ = '(';
 
@@ -85,7 +153,8 @@ int quote_list(char *res)
     while (act.type == AT_FCE || act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET || act.type == AT_QUOTE)
     {
         quote_arg_sym(tmp);
-        *ptr++ = ' ';
+        if (first) first = 0;
+        else *ptr++ = ' ';
         strcpy(ptr, tmp);
         ptr += strlen(tmp);
 
@@ -132,9 +201,7 @@ int quote_arg_sym(char *res)
 // argument funkce
 int arg_sym(char *res)
 {
-    int *var_v = NULL;
-    char *var_n = NULL;
-    int found;
+    member_t mem;
     atom act;
 
     lexa_get(&act);
@@ -145,26 +212,9 @@ int arg_sym(char *res)
         list(res);
         break;
     case AT_VAR:
-        // TODO: get variable from the list
-        begin();
-        found = 0;
-
-        while (next(&var_v, &var_n))
-        {
-            if (strcmp(var_n, act.string) == 0)
-            {
-                found = 1;
-                break;
-            }
-        }
-
-        if (found)
-            sprintf(res, "%d", *var_v);
-        else
-        {
-            sprintf(error_message, "unknown variable %s\n", act.string);
+        if (get_var(act.string, &mem, NULL) == ERROR_CODE)
             return ERROR_CODE;
-        }
+        sprintf(res, "%d", mem.value);
         break;
     case AT_NUM:
         sprintf(res, "%d", act.value);
@@ -210,8 +260,16 @@ int list_in(char *res)
     int bres;
     int type;
     char val[20];
-    int *var_v = NULL;
+
+    member_t mem;
+    func_t func;
     char *var_n = NULL;
+    member_t *var_v;
+    int *args;   // function args array
+    int cargs;   // args count
+    FILE *stream;
+    lexa_state state;
+    lexa_state state_backup;
 
     lexa_get(&act);
 
@@ -220,7 +278,47 @@ int list_in(char *res)
         strcpy(res, nil);
         return OK_CODE;
     }
-    else if (act.type != AT_FCE)
+    else if (act.type == AT_FCE)
+    {
+        // the rest of function
+    }
+    else if (act.type == AT_VAR
+             && get_var(act.string, &mem, &var_n) != ERROR_CODE
+             && mem.type == TYPE_FUNCTION)
+    {
+        lexa_next(&act);
+        if (act.type == AT_LBRACKET)
+            get_num_list(&args, &cargs);
+        else
+        {
+            sprintf(error_message, "syntax error\n");
+            return ERROR_CODE;
+        }
+        if (cargs != mem.func.par_count)
+        {
+            sprintf(error_message, "got %d arguments but %s function expects %d\n", cargs, var_n, mem.func.par_count);
+            return ERROR_CODE;
+        }
+
+        var_n = (char *) malloc(1024); // function will not be longer than kB, will be?
+        replnph(var_n, mem.func.body, args, cargs);
+        free(args);
+
+        stream = fmemopen(var_n, strlen(var_n), "r");
+        state.stream = stream;
+        state.lchar = ' '; // initial character
+        state_backup = lexa_init(&state);
+
+        // call function
+        lexa_next(NULL);
+        type = list(res);
+        fclose(stream);
+        lexa_init(&state_backup);
+        free(var_n);
+        lexa_next(NULL);
+        return type;
+    }
+    else
     {
         sprintf(error_message, "syntax error\n");
         return ERROR_CODE;
@@ -290,8 +388,9 @@ int list_in(char *res)
             lexa_next(NULL);
             if (arg(res) == ERROR_CODE)
                 return ERROR_CODE;
-            var_v = (int *) malloc(sizeof(int));
-            *var_v = strtol(res, NULL, 10);
+            var_v = (member_t *) malloc(sizeof(member_t));
+            var_v->value = strtol(res, NULL, 10);
+            var_v->type = TYPE_VARIABLE;
             push(var_v, var_n);
         }
         else
@@ -301,6 +400,37 @@ int list_in(char *res)
         }
 
         lexa_next(NULL);
+        return OK_CODE;
+    case DEFUN:
+        lexa_next(&act);
+        if (act.type != AT_VAR)
+        {
+            sprintf(error_message, "defun syntax error\n");
+            return ERROR_CODE;
+        }
+
+        var_n = (char *) malloc(strlen(res) + 1);
+        strcpy(var_n, act.string);
+
+        lexa_next(&act);
+        if (act.type != AT_NUM)
+        {
+            sprintf(error_message, "defun syntax error\n");
+            return ERROR_CODE;
+        }
+
+        func.par_count = act.value;
+
+        lexa_next(&act);
+        quote_arg_sym(res);
+        lexa_next(NULL);
+
+        strcpy(func.body, res);
+        var_v = (member_t *) malloc(sizeof(member_t));
+        var_v->func = func;
+        var_v->type = TYPE_FUNCTION;
+        push(var_v, var_n);
+
         return OK_CODE;
     case QUIT:
         lexa_next(NULL);
@@ -381,10 +511,6 @@ int start()
     atom act;
     char res[128];
     int code;
-
-    #ifdef __linux__
-    lexa_flush();
-    #endif // __linux__
 
     code = lexa_next(&act);
     if (code == END_CODE)

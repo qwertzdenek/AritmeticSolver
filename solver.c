@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
     int inter = 0;
     FILE *source;
     int counter = 0;
+    lexa_state state;
 
     if (argc > 1)
     {
@@ -84,7 +85,9 @@ int main(int argc, char *argv[])
         inter = 1;
     }
 
-    lexa_init(source);
+    state.stream = source;
+    state.lchar = ' '; // initial character
+    lexa_init(&state);
 
     while (1)
     {
@@ -106,7 +109,12 @@ int main(int argc, char *argv[])
         else if (res == END_CODE)
             break;
         else if (res == ERROR_CODE)
+        {
+            #ifdef __linux__
+                lexa_flush();
+            #endif // __linux__
             print_error();
+        }
     }
 
     printf("Bye.\n");

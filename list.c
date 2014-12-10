@@ -7,7 +7,7 @@
 typedef struct Node_t
 {
     char *name;
-    int *value;
+    member_t *value;
     struct Node_t *next;
 } node_t;
 
@@ -25,10 +25,8 @@ int isEmpty()
     return top == NULL;
 }
 
-void push(int *value, char *name)
+void push(member_t *value, char *name)
 {
-    assert(name);
-
     node_t *node = (node_t *) malloc(sizeof(node_t));
     if (node == NULL)
     {
@@ -48,7 +46,7 @@ void push(int *value, char *name)
     n++;
 }
 
-int pop(int **p_value, char **p_name)
+int pop(member_t **p_value, char **p_name)
 {
     node_t *tmp;
 
@@ -62,8 +60,6 @@ int pop(int **p_value, char **p_name)
     top = tmp->next;
     n--;
 
-    free(tmp->value);
-    free(tmp->name);
     free(tmp);
 
     return 1;
@@ -76,7 +72,7 @@ void begin()
     current = top;
 }
 
-int next(int **p_value, char **p_name)
+int next(member_t **p_value, char **p_name)
 {
     if (current == NULL)
         return 0;
@@ -91,37 +87,13 @@ int next(int **p_value, char **p_name)
 
 void cleanup()
 {
+    member_t *p_value;
+    char *p_name;
+
     while (n > 0)
-        pop(NULL, NULL);
-}
-
-/*
-int main(int argc, char *argv[])
-{
-    int value;
-    char *name;
-    int foo;
-
-    push(5, "a");
-    push(12, "b");
-    push(10, "d");
-    push(8, "g");
-    push(16, "tmp");
-    push(12, "aaa");
-
-    foo = 0;
-    while(next(&value, &name))
     {
-        printf("next[%d] %s = %d\n", foo, name, value);
-        foo++;
+        pop(&p_value, &p_name);
+        free(p_value);
+        free(p_name);
     }
-
-    pop(&value, &name);
-    printf("%s = %d\n", name, value);
-
-    while (pop(NULL, NULL))
-        ;
-
-    return 0;
 }
-*/
