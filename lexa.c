@@ -15,7 +15,7 @@
 const char *funs_names[FUNS_COUNT] =
 {
     "+", "-", "*", "/", "QUOTE", "SET", "HELP", "QUIT",
-    "CAR", "CDR", "ABOUT", "PRINT", "DEFUN"
+    "CAR", "CDR", "ABOUT", "PRINT", "DEFUN", "==", "!=", ">=", "<="
 };
 
 char lchar;
@@ -25,7 +25,7 @@ static atom csym;
 int is_operator(char o)
 {
     if (o == '+' || o == '*' || o == '-' || o == '/' || o == '=' ||
-            o == '<' || o == '>')
+            o == '<' || o == '>' || o == '!')
         return OK_CODE;
     else
         return END_CODE;

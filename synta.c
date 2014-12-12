@@ -18,6 +18,7 @@ char *t = "T";
 int list(char *out);
 int quote_arg_sym(char *res);
 int call_sub(char *res);
+int arg(char *res);
 int arg_sym(char *res);
 
 int addii(int a, int b)
@@ -40,32 +41,22 @@ int divii(int a, int b)
     return a / b;
 }
 
-int ncomp(int a, int b)
+int neq(int a, int b)
 {
     return a != b;
 }
 
-int comp(int a, int b)
+int eq(int a, int b)
 {
     return a == b;
 }
 
-int small(int a, int b)
-{
-    return a < b;
-}
-
-int big(int a, int b)
-{
-    return a > b;
-}
-
-int smalleq(int a, int b)
+int leq(int a, int b)
 {
     return a <= b;
 }
 
-int bigeq(int a, int b)
+int geq(int a, int b)
 {
     return a >= b;
 }
@@ -73,6 +64,39 @@ int bigeq(int a, int b)
 int zero(int a, int b)
 {
     return 0;
+}
+
+int next_num(int *var)
+{
+    atom act;
+    char val[16];
+    char *tmp;
+
+    lexa_get(&act);
+
+    if (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
+    {
+        if (arg(val) == ERROR_CODE)
+            return ERROR_CODE;
+        if (strcmp(val, t) == 0)
+            *var = 1;
+        else if (strcmp(val, nil) == 0)
+            *var = 0;
+        else
+            *var = strtol(val, &tmp, 10);
+        if ((char *) val == tmp)
+        {
+            sprintf(error_message, "this %s is not a valid boolean operand\n", val);
+            return ERROR_CODE;
+        }
+    }
+    else
+    {
+        sprintf(error_message, "syntax error\n");
+        return ERROR_CODE;
+    }
+
+    return OK_CODE;
 }
 
 int get_var(char *name, member_t *res, char **stored_name)
@@ -114,7 +138,7 @@ int get_num_list(int **res, int *cres)
     *cres = 0;
     lexa_next(&act);
 
-    while (act.type == AT_VAR || act.type == AT_NUM)
+    while (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
     {
         *cres = *cres + 1;
         arg_sym(tmp);
@@ -258,8 +282,8 @@ int list_in(char *res)
     int (*op)(int, int) = zero;
     int ares = 0;
     int bres;
+    int boolres;
     int type;
-    char val[20];
 
     member_t mem;
     func_t func;
@@ -335,16 +359,8 @@ int list_in(char *res)
         op = subii;
         type = ARIT;
         lexa_next(&act);
-        if (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
-        {
-            arg(val);
-            ares = strtol(val, NULL, 10);
-        }
-        else
-        {
-            sprintf(error_message, "syntax error\n");
+        if (next_num(&ares) == ERROR_CODE)
             return ERROR_CODE;
-        }
         break;
     case MULT:
         op = mulii;
@@ -355,16 +371,40 @@ int list_in(char *res)
         op = divii;
         type = ARIT;
         lexa_next(&act);
-        if (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
-        {
-            arg(val);
-            ares = strtol(val, NULL, 10);
-        }
-        else
-        {
-            sprintf(error_message, "syntax error\n");
+        if (next_num(&ares) == ERROR_CODE)
             return ERROR_CODE;
-        }
+        break;
+    case EQ:
+        op = eq;
+        type = BOOL;
+        boolres = 1;
+        lexa_next(&act);
+        if (next_num(&ares) == ERROR_CODE)
+            return ERROR_CODE;
+        break;
+    case NEQ:
+        op = neq;
+        type = BOOL;
+        boolres = 1;
+        lexa_next(&act);
+        if (next_num(&ares) == ERROR_CODE)
+            return ERROR_CODE;
+        break;
+    case LEQ:
+        op = leq;
+        type = BOOL;
+        boolres = 1;
+        lexa_next(&act);
+        if (next_num(&ares) == ERROR_CODE)
+            return ERROR_CODE;
+        break;
+    case GEQ:
+        op = geq;
+        type = BOOL;
+        boolres = 1;
+        lexa_next(&act);
+        if (next_num(&ares) == ERROR_CODE)
+            return ERROR_CODE;
         break;
     case QUOTE:
         lexa_next(NULL);
@@ -442,19 +482,20 @@ int list_in(char *res)
 
     lexa_next(&act);
 
-    while (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET || act.type == AT_QUOTE)
+    while (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
     {
         if (type == ARIT)
         {
-            if (arg(val) == ERROR_CODE)
+            if (next_num(&bres) == ERROR_CODE)
                 return ERROR_CODE;
-            ares = op(ares, strtol(val, NULL, 10));
+            ares = op(ares, bres);
         }
         else if (type == BOOL)
         {
-            if (arg(val) == ERROR_CODE)
+            if (next_num(&bres) == ERROR_CODE)
                 return ERROR_CODE;
-            bres &= op(bres, strtol(val, NULL, 10));
+            boolres &= op(ares, bres);
+            ares = bres;
         }
 
         if (lexa_next(&act) == END_CODE)
@@ -467,7 +508,7 @@ int list_in(char *res)
     }
     else
     {
-        strcpy(res, bres ? t : nil);
+        strcpy(res, boolres ? t : nil);
     }
 
     return OK_CODE;

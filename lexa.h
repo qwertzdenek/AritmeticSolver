@@ -9,11 +9,11 @@
 #define AT_QUOTE 6
 #define AT_UNKNOWN 7
 
-#define FUNS_COUNT 13
+#define FUNS_COUNT 17
 
 enum ftype
 {
-    ADD, SUB, MULT, DIV, QUOTE, SET, HELP, QUIT, CAR, CDR, ABOUT, PRINT, DEFUN
+    ADD, SUB, MULT, DIV, QUOTE, SET, HELP, QUIT, CAR, CDR, ABOUT, PRINT, DEFUN, EQ, NEQ, GEQ, LEQ
 };
 
 typedef struct
