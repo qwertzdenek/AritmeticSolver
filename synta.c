@@ -61,9 +61,52 @@ int geq(int a, int b)
     return a >= b;
 }
 
+int land(int a, int b)
+{
+    return a & b;
+}
+
+int lor(int a, int b)
+{
+    return a | b;
+}
+
 int zero(int a, int b)
 {
     return 0;
+}
+
+int skip_list()
+{
+    atom act;
+    int counter = 0;
+
+    lexa_get(&act);
+
+    if (act.type == AT_RBRACKET)
+        return END_CODE;
+    else if (act.type != AT_LBRACKET)
+        return ERROR_CODE;
+
+    while (1)
+    {
+        switch (act.type)
+        {
+        case AT_LBRACKET:
+            counter++;
+            break;
+        case AT_RBRACKET:
+            counter--;
+            break;
+        }
+
+        if (counter <= 0)
+            break;
+        else
+            lexa_next(&act);
+    }
+
+    return OK_CODE;
 }
 
 int next_num(int *var)
@@ -83,11 +126,13 @@ int next_num(int *var)
         else if (strcmp(val, nil) == 0)
             *var = 0;
         else
-            *var = strtol(val, &tmp, 10);
-        if ((char *) val == tmp)
         {
-            sprintf(error_message, "this %s is not a valid boolean operand\n", val);
-            return ERROR_CODE;
+            *var = strtol(val, &tmp, 10);
+            if ((char *) val == tmp)
+            {
+                sprintf(error_message, "this %s is not a valid operand\n", val);
+                return ERROR_CODE;
+            }
         }
     }
     else
@@ -238,6 +283,11 @@ int arg_sym(char *res)
     case AT_VAR:
         if (get_var(act.string, &mem, NULL) == ERROR_CODE)
             return ERROR_CODE;
+        if (mem.type == TYPE_FUNCTION)
+        {
+            sprintf(error_message, "syntax error (function argument)\n");
+            return ERROR_CODE;
+        }
         sprintf(res, "%d", mem.value);
         break;
     case AT_NUM:
@@ -375,6 +425,7 @@ int list_in(char *res)
             return ERROR_CODE;
         break;
     case EQ:
+    case EQQ:
         op = eq;
         type = BOOL;
         boolres = 1;
@@ -400,6 +451,22 @@ int list_in(char *res)
         break;
     case GEQ:
         op = geq;
+        type = BOOL;
+        boolres = 1;
+        lexa_next(&act);
+        if (next_num(&ares) == ERROR_CODE)
+            return ERROR_CODE;
+        break;
+    case LAND:
+        op = land;
+        type = BOOL;
+        boolres = 1;
+        lexa_next(&act);
+        if (next_num(&ares) == ERROR_CODE)
+            return ERROR_CODE;
+        break;
+    case LOR:
+        op = lor;
         type = BOOL;
         boolres = 1;
         lexa_next(&act);
@@ -449,7 +516,7 @@ int list_in(char *res)
             return ERROR_CODE;
         }
 
-        var_n = (char *) malloc(strlen(res) + 1);
+        var_n = (char *) malloc(strlen(act.string) + 1);
         strcpy(var_n, act.string);
 
         lexa_next(&act);
@@ -471,6 +538,43 @@ int list_in(char *res)
         var_v->type = TYPE_FUNCTION;
         push(var_v, var_n);
 
+        return OK_CODE;
+    case BIF:
+        lexa_next(&act); // read condition
+        if (next_num(&ares) == ERROR_CODE)
+            return ERROR_CODE;
+        lexa_next(&act);
+        if (ares) // if true condition
+        {
+            if (list(res) == ERROR_CODE) // read true branch
+            {
+                sprintf(error_message, "if syntax error\n");
+                return ERROR_CODE;
+            }
+            lexa_next(&act);
+            type = skip_list();
+            if (type == ERROR_CODE) // skip false branch
+            {
+                sprintf(error_message, "if syntax error\n");
+                return ERROR_CODE;
+            }
+            else if (type == OK_CODE)
+                lexa_next(NULL);
+        }
+        else // if false condition
+        {
+            if (skip_list() == ERROR_CODE) // skip true branch
+            {
+                sprintf(error_message, "if syntax error\n");
+                return ERROR_CODE;
+            }
+            lexa_next(&act);
+            type = list(res);
+            if (type == OK_CODE) // read false branch
+                lexa_next(NULL);
+            else
+                strcpy(res, nil);     // false condition was empty
+        }
         return OK_CODE;
     case QUIT:
         lexa_next(NULL);
@@ -519,6 +623,10 @@ int list(char *out)
 {
     atom act;
     int code;
+    char tmp[128];
+
+    if (out == NULL)
+        out = (char *) tmp;
 
     lexa_get(&act);
     if (act.type != AT_LBRACKET)
