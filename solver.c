@@ -1,7 +1,7 @@
 /*
  * solver.c
  *
- * Copyright 2012 Zdeněk Janeček <jan.zdenek@gmail.com>
+ * Copyright 2012-2014 Zdeněk Janeček <jan.zdenek@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
- *
- *
  */
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,7 +60,6 @@ void readfile(FILE *f, char *l)
 
 int main(int argc, char *argv[])
 {
-    char l[2048];
     int res;
     int inter = 0;
     FILE *source;
@@ -94,10 +90,6 @@ int main(int argc, char *argv[])
         if (inter)
         {
             printf("[%d]> ",counter);
-        }
-        else
-        {
-            readfile(source, l);
         }
 
         res = start();

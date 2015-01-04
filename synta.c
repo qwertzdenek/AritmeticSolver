@@ -1,3 +1,24 @@
+/*
+ * synta.c
+ *
+ * Copyright 2012-2014 Zdeněk Janeček <jan.zdenek@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301, USA.
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,9 +38,27 @@ char *t = "T";
 
 int list(char *out);
 int quote_arg_sym(char *res);
+int quote_list(char *res);
 int call_sub(char *res);
 int arg(char *res);
 int arg_sym(char *res);
+int skip_list();
+
+char *help_text =
+    "LISP language interpretter. Written by Zdeněk Janeček in years 2012-2014\n"\
+    "Functions:\n"\
+    "  aritmetic -> + - * /\n"\
+    "  boolean -> == = != <= >= & |\n"\
+    "  quote - do not evaluate and print\n"\
+    "  set - set variable (set 'a 2)\n"\
+    "  if - branch condition\n"\
+    "  help - print this message\n"\
+    "  quit - exit program\n";
+
+void help(char *res)
+{
+    strcpy(res, help_text);
+}
 
 int addii(int a, int b)
 {
@@ -76,6 +115,89 @@ int zero(int a, int b)
     return 0;
 }
 
+// return the first element of list
+int car_list(char *res)
+{
+    atom act;
+    int type;
+    FILE *stream;
+    lexa_state state;
+    lexa_state state_backup;
+
+    lexa_get(&act);
+
+    type = list(res);
+    if (type == END_CODE)
+        strcpy(res, nil);
+    else if (type == ERROR_CODE)
+        return ERROR_CODE;
+
+    stream = fmemopen(res, strlen(res), "r");
+    state.stream = stream;
+    state.lchar = ' '; // initial character
+    state_backup = lexa_init(&state);
+
+    // read first symbol
+    lexa_next(&act);
+    if (act.type != AT_LBRACKET)
+    {
+        sprintf(error_message, "car: argument must be a list\n");
+        return ERROR_CODE;
+    }
+
+    lexa_next(&act);
+    if (arg_sym(res) == END_CODE)
+        strcpy(res, nil);
+
+    fclose(stream);
+    lexa_init(&state_backup);
+
+    return OK_CODE;
+}
+
+int cdr_list(char *res)
+{
+    atom act;
+    int type;
+    FILE *stream;
+    lexa_state state;
+    lexa_state state_backup;
+
+    lexa_get(&act);
+
+    type = list(res);
+    if (type == END_CODE)
+        strcpy(res, nil);
+    else if (type == ERROR_CODE)
+        return ERROR_CODE;
+
+    stream = fmemopen(res, strlen(res), "r");
+    state.stream = stream;
+    state.lchar = ' '; // initial character
+    state_backup = lexa_init(&state);
+
+    // read first symbol
+    lexa_next(&act);
+    if (act.type != AT_LBRACKET)
+    {
+        sprintf(error_message, "cdr: argument must be a list\n");
+        return ERROR_CODE;
+    }
+
+    lexa_next(&act);
+    if (act.type == AT_LBRACKET)
+        skip_list();
+    if (quote_list(res) == END_CODE)
+        strcpy(res, nil);
+
+    fclose(stream);
+    lexa_init(&state_backup);
+
+//    lexa_next(NULL);
+    return OK_CODE;
+}
+
+// přeskočí vnořené seznamy
 int skip_list()
 {
     atom act;
@@ -175,15 +297,30 @@ int get_var(char *name, member_t *res, char **stored_name)
 
 int get_num_list(int **res, int *cres)
 {
-    int i;
-    char tmp[16];
     atom act;
+    int i;
+    char tmp[64];
     member_t *mem;
+    FILE *stream;
+    lexa_state state;
+    lexa_state state_backup;
 
     *cres = 0;
+
+    if (arg(tmp) == ERROR_CODE)
+        return ERROR_CODE;
+
+    stream = fmemopen(tmp, strlen(tmp), "r");
+    state.stream = stream;
+    state.lchar = ' '; // initial character
+    state_backup = lexa_init(&state);
+
     lexa_next(&act);
 
-    while (act.type == AT_VAR || act.type == AT_NUM || act.type == AT_LBRACKET)
+    if (act.type == AT_LBRACKET)
+        lexa_next(&act);
+
+    while (act.type == AT_VAR || act.type == AT_NUM)
     {
         *cres = *cres + 1;
         arg_sym(tmp);
@@ -204,6 +341,9 @@ int get_num_list(int **res, int *cres)
         (*res)[i] = mem->value;
         free(mem);
     }
+
+    fclose(stream);
+    lexa_init(&state_backup);
 
     return OK_CODE;
 }
@@ -340,7 +480,7 @@ int list_in(char *res)
     char *var_n = NULL;
     member_t *var_v;
     int *args;   // function args array
-    int cargs;   // args count
+    int cargs = 0;   // args count
     FILE *stream;
     lexa_state state;
     lexa_state state_backup;
@@ -352,22 +492,16 @@ int list_in(char *res)
         strcpy(res, nil);
         return OK_CODE;
     }
-    else if (act.type == AT_FCE)
-    {
-        // the rest of function
-    }
     else if (act.type == AT_VAR
              && get_var(act.string, &mem, &var_n) != ERROR_CODE
              && mem.type == TYPE_FUNCTION)
     {
-        lexa_next(&act);
-        if (act.type == AT_LBRACKET)
-            get_num_list(&args, &cargs);
-        else
+        if (mem.func.par_count > 0)
         {
-            sprintf(error_message, "syntax error\n");
-            return ERROR_CODE;
+            lexa_next(&act);
+            type = get_num_list(&args, &cargs);
         }
+
         if (cargs != mem.func.par_count)
         {
             sprintf(error_message, "got %d arguments but %s function expects %d\n", cargs, var_n, mem.func.par_count);
@@ -391,6 +525,10 @@ int list_in(char *res)
         free(var_n);
         lexa_next(NULL);
         return type;
+    }
+    else if (act.type == AT_FCE)
+    {
+        // the rest of this function
     }
     else
     {
@@ -473,6 +611,9 @@ int list_in(char *res)
         if (next_num(&ares) == ERROR_CODE)
             return ERROR_CODE;
         break;
+    case LIST:
+        quote_list(res);
+        return OK_CODE;
     case QUOTE:
         lexa_next(NULL);
         quote_arg_sym(res);
@@ -481,6 +622,16 @@ int list_in(char *res)
     case PRINT:
         lexa_next(NULL);
         arg(res);
+        lexa_next(NULL);
+        return OK_CODE;
+    case CAR:
+        lexa_next(NULL);
+        car_list(res);
+        lexa_next(NULL);
+        return OK_CODE;
+    case CDR:
+        lexa_next(NULL);
+        cdr_list(res);
         lexa_next(NULL);
         return OK_CODE;
     case SET:
@@ -579,6 +730,10 @@ int list_in(char *res)
     case QUIT:
         lexa_next(NULL);
         return END_CODE;
+    case HELP:
+        help(res);
+        lexa_next(NULL);
+        return OK_CODE;
     default:
         sprintf(error_message, "Not implemented function\n");
         return ERROR_CODE;
@@ -618,7 +773,7 @@ int list_in(char *res)
     return OK_CODE;
 }
 
-// seznam (ošetřuje závorky)
+// list (checks for brackets)
 int list(char *out)
 {
     atom act;
@@ -658,7 +813,7 @@ int list(char *out)
 int start()
 {
     atom act;
-    char res[128];
+    char res[1024];
     int code;
 
     code = lexa_next(&act);

@@ -1,27 +1,29 @@
 \documentclass[a4paper, 12pt]{article}
 
-\usepackage{czech}
-\usepackage{graphicx}
+\usepackage[czech]{babel}
 \usepackage[utf8]{inputenc}
+\usepackage{lmodern} % fonty Latin Modern
+\usepackage{cmap}    % podpora kopírování v PDF
+\usepackage[T1]{fontenc} % Nastavení kódování fontu na formát T1.
+
+\usepackage{graphicx}
 \usepackage{listings}
 \usepackage{url}
-% \usepackage{a4wide}
+\usepackage{natbib}
 
-\def\CS{$\cal C\kern-.1667em\lower.5ex\hbox{$\cal S$}\kern-.075em $}
 \DeclareUrlCommand\url{\def\UrlLeft{<}\def\UrlRight{>} \urlstyle{tt}}
 
-\usepackage{natbib}
 \bibliographystyle{csplainnat}
 
 \lstset{language=C}
 
 \begin{document}
 \begin{titlepage}
-\includegraphics[bb=0 0 167 96]{fav_cmyk.pdf}
+\includegraphics{fav_cmyk.pdf}
 \vfill
 \begin{center}
-{\huge Programování v~jazyce C}\\[3ex]
-{\Large Interpret podmnožiny jazyka LISP}
+{\huge Formální jazyky a překladače}\\[3ex]
+{\Large Interpret jazyka LISP}
 \end{center}
 \vfill
 \begin{tabbing}
@@ -34,18 +36,16 @@ Datum:\> \today
 \tableofcontents
 
 \section{Zadání}
-Naprogramujte v~ANSI C přenositelnou \emph{konzolovou aplikaci}, která
+Naprogramujte v jazyce C přenositelnou \emph{konzolovou aplikaci}, která
 bude fungovat jako jednoduchý interpret podmnožiny jazyka LISP.
 Vstupem budou příkazy v~jazyce LISP. Výstupem pak výsledek vyhodnocení
 každého výrazu.
 
-Program se bude spouštět příkazem \textsf{lisp.exe
-  [\textless{}vstupní-soubor\textgreater{}]}. Symbol
-\textsf{\textless{}vstupní-soubor\textgreater{}} zastupuje nepovinny
-parametr -- název vstupního souboru se seznamem výrazů v~jazyce
-LISP. Není-li první parametr uveden, program bude fungovat
-v~interaktivním módu, kdy se příkazy budou provádět přímo zadáním
-z~konzole do programu.
+Program se bude spouštět příkazem \textsf{lisp [soubor]}. Symbol
+\textsf{[soubor]} zastupuje nepovinný parametr -- název vstupního
+souboru se seznamem výrazů v~jazyce LISP. Není-li první parametr
+uveden, program bude fungovat v~interaktivním módu, kdy se příkazy
+budou provádět přímo zadáním z~konzole do programu.
 
 Úkolem Vámi vyvinutého programu tedy je:
 \begin{enumerate}
@@ -61,150 +61,162 @@ z~konzole do programu.
   zpracovat.
 \end{enumerate}
 
-Váš program může být během testování spuštěn například takto:
+Program může být během testování spuštěn například takto:
 \begin{verbatim}
-  $ lisp.exe test.lisp
+  $ ./lisp test.lisp # přímé čtení souboru
+  $ cat test.lisp | ./lisp # stdin roura
+  $ ./lisp # interaktivně
 \end{verbatim}
 
-Hotovou práci odevzdejte uploadem na server podle pokynů na webu, v~archivu
-ZIP, pojmenovaném Vaším osobním číslem. Archiv nechť obsahuje všechny
-zdrojové soubory potřebné k~přeložení programu, \textsf{makefile} pro
-Windows i Linux (pro překlad v~UNIXu/Linuxu připravte soubor pojmenovaný
-\textsf{Makefile} a pro Windows \textsf{Makefile.win}) a dokumentaci ve
-formátu PDF vytvořenou v~typografickém systému \TeX{}, resp. \LaTeX{}.
-Bude-li některá z~částí chybět, kontrolní skript Vaši práci odmítne.
-
 \section{Problematika}
-Každý programovací popisujeme gramatikou jako každý jiný jazyk.
-Prefixový zápis celou věc zjednodušuje, narozdíl od běžného infixového
-zápisu. LISP nám už v~historii ukázal že lze programovat lehce jinak.
-Totiž, že vše je seznamem.
+Jazyk LISP je znám svojí jednoduchou gramatikou.
+Jeho základ lze popsat třemi základními neterminály a počátečním
+symbolem START takto: 
+
+\medskip
+
+\begin{tabular}{r@{$\quad\longrightarrow\quad$}l}
+START & LIST START | LIST\\
+LIST & (LIST\_IN)\\
+LIST\_IN & fce ARG\\
+ARG & LIST ARG | term ARG | e
+\end{tabular}
+
+Oddělil jsem terminální symboly na názvy funkcí a termy obsahující
+zbylá čísla a proměnné. Generovaný jazyk je například:
+
+\begin{verbatim}
+(fce LIST ARG) -> (fce (LIST_IN) ARG)
+-> (fce (fce ARG) ARG) -> (fce (fce term))
+\end{verbatim}
+
+Nenastane tedy případ, který by skončil se zakázanou derivací
+se seznamem bez funkce.
+Jednoznačně totiž platí, že za každou otevírací závorkou musí
+vzniknout funkce (+, -, quote, set, if...), ale čísla a proměnné
+jsem označil terminálním symbolem term. Ta vznikají jen řetězením
+symbolu ARG, který následuje po funkci.
 
 \subsection{Lexikální analýza}
-Při návrhu programu jsem se řídil jednoduchou gramatikou, která je
-naznačena na obrázku \ref{fig:gram}. Každý neterminální symbol značený
-velkými písmeny představuje jednu funkci v~programu. Terminální symboly
-jsou: \emph{č} jako číslo, \emph{op} jako operátor, * je identifikátor
-proměnné.
+Při návrhu programu jsem se řídil gramatikou, kterou jsem od
+základního návrhu rozšířil o podporu výpisu bez vyhodnocování (quote).
+Její podoba je na obrázku \ref{fig:gram}.
 
 \begin{figure}
 \centering
 \begin{tabular}{r@{$\quad\longrightarrow\quad$}l}
-START & VÝRAZ $|$ KOMP\\
-VYRAZ & op \{KOMP\}\\
-KOMP & č $|$ IDENT $|$ (VYRAZ) $|$ (KOMP)\\
-IDENT & QUOTE $|$ quit $|$ set $|$ car $|$ *\\[1ex]
-QUOTE & QKOMP $|$ KOMP\\
-QKOMP & č $|$ op $|$ * $|$ (QLIST)\\
-QLIST & \{QKOMP\}
-
+START & LIST | 'ARG\_SYM\\
+LIST & (LIST\_IN)\\
+LIST\_IN & fce ARG | e\\
+ARG & ARG\_SYM ARG | 'ARG\_SYM ARG | e\\
+ARG\_SYM & LIST | var | num
 \end{tabular}
-
-\caption{Gramatika zadaného jazyka.}
+\caption{Gramatika použitého jazyka}
 \label{fig:gram}
 \end{figure}
 
-Jakmile jsem měl k~dispozici gramatiku, nic mi nebránilo sepsat
-syntaktický analyzátor. Ještě před tím jsem využil zkušeností a pustil
-se na lexikální analýzu.  Potřeboval jsem něco, co mi bude rozlišovat
-typy lexikálních atomů. Detekuji tedy atomy, definované
-v~\texttt{lexa.h} (tabulka \ref{tab:atom}).
+Oddělil jsem také neterminální symbol argumentu pro jeho opakované
+použití. Dovolené je hned jako počáteční symbol zavolat quote,
+ale jen v jeho zkrácené formě. Zbytek zůstává stejný. Oba symboly
+fce a var lze definovat pro nové symboly. Pro lexikální analýzu
+je důležité umět rozlišit funkci od proměnné. Lexikální analyzátor
+rozlišuje jen vnitřní funkce a ostatní symboly jsou jen proměnné.
+
+Detekuji symboly definované v~\texttt{lexa.h} (tabulka
+\ref{tab:atom}).
 
 \begin{table}
 \centering
 \begin{tabular}{|r|l|}
 \hline
 Název & Popis\\ \hline\hline
-AT\_UNKNOWN & Neznámý\\ \hline
-AT\_OPERATOR & Aritmetický operátor\\ \hline
-AT\_IDENT & Název proměnné/příkazu\\ \hline
-AT\_VALUE & Celočíselná hodnota\\ \hline
-AT\_LBRACKET & Otevírací závorka\\ \hline
-AT\_RBRACKET & Zavírací závorka\\
+AT\_FCE & funkce\\ \hline
+AT\_VAR & proměnná\\ \hline
+AT\_NUM & číslo\\ \hline
+AT\_LBRACKET & otevírací závorka\\ \hline
+AT\_RBRACKET & zavírací závorka\\ \hline
+AT\_QUOTE & výpis bez vyhodnocení\\ \hline
+AT\_UNKNOWN & neznámý symbol\\
 \hline
 \end{tabular}
 \caption{Rozeznávané atomy}
 \label{tab:atom}
 \end{table}
 
-K~získávání atomů slouží funkce \verb+lexa_next(atom *sym)+.  Dostávám
-tedy rovnou parsovaná data ve formě struktury \texttt{atom}.  Ta
-vypadá takto:
+Zpracování vstupu probíhá sekvenčně a to za pomocí funkce \verb+lexa_next(atom *sym)+.
+V jednu chvíli mám uložen právě jeden symbol. V tomto ohledu se nijak
+neliší načítání ze standardního vstupu a ze souboru.
+
 \begin{lstlisting}
-typedef struct {
-  unsigned char type;
-  char data[32];
+typedef struct
+{
+    int type;
+    union
+    {
+        char string[28];
+        int value;
+    };
 } atom;
 \end{lstlisting}
 
-Že je to dobrý nápad jsem se přesvědčil velice rychle. Získáním
-jednotlivých symbolů dostávám rovnou řetězce. To dovoluje snadné
-rozhodování a kód se zkracuje. Hodí se využít rekurzivního
-volání jelikož k~tomu sama gramatika vybízí.
-Nevyužívám současně žádnou dynamicky alokovanou paměť.
+Před začátkem čtení je třeba nejprve lexikální analyzátor inicializovat
+funkcí \verb+lexa_state lexa_init(lexa_state *s)+, která nastaví vnitřní
+stav analyzátoru na předaný stav. Stav klasifikátoru jsem zavedl kvůli
+podpoře rekurze. Obsahuje aktuální čtecí stream, poslední načtený symbol
+a znak. První symbol by neměl být prázdný a je to nějaký imaginární
+bílý znak.
 
-Jakmile začínáme vyhodnocovat nový příkaz, musí se nejprve lexikální
-analyzátor inicializovat funkcí
-\verb+void lexa_init(char*strin)+, která vynuluje aktuální atom a
-nastaví vnitřní ukazatel na řetězec \texttt{static char *ptr}. Tento
-ukazatel se posouvá v~závislosti na datech a výsledné kusy kopíruji do pole
-\texttt{data} vyšetřovaného atomu. Například můžu uložit celočíselnou
-hodnotu přímo:
+Pro zpracování symbolů používám několik pomocných funkcí:
+\begin{description}
+  \item[is\_operator] testuje existenci operátoru
+  \item[write\_atom\_fce] atom funkce
+  \item[write\_atom\_var] atom proměnné
+  \item[write\_atom\_num] atom samotného čísla
+  \item[write\_atom\_quote] zkrácený quote symbol \verb+'+
+\end{description}
 
-\begin{lstlisting}
-if (isdigit(*ptr))
-{
-  ival = (int) strtol(ptr, &ptr, 10);
-  csym.type = AT_VALUE;
-  memcpy(csym.data, &ival, sizeof(int));
-}
-\end{lstlisting}
-
-Řetězec uložím i s~ukončujícím nulovým znakem.  Rozdíl konečného
-ukazatele a počátečního dává počet prvků.
-
-\begin{lstlisting}
-if (is_operator(*ptr))
-{
-  tptr = ptr;
-  while (is_operator(*ptr))
-    ptr++;
-  csym.type = AT_OPERATOR;
-  memcpy(csym.data, tptr, ptr - tptr);
-  *(csym.data + (ptr - tptr)) = 0;
-}
-\end{lstlisting}
+Samotná funkce \texttt{lexa\_next} zajišťuje čtení nových symbolů.
+Nejdříve se vypořádám s prázdnými znaky a pokud nejsem na konci,
+rozhodnu se podle znaku \texttt{lchar}. Platí obvyklé pravidlo
+že identifikátor nesmí začínat číslem, ale je dovolené třeba podtržítko.
+Nejdříve zjistím, zda se jedná o číslo s unárním operátorem, pak
+interní funkci a jinak se musí jednat o proměnnou. V případě
+že symbol není rozpoznán, je vrácen jako neznámý.
 
 Funkce \texttt{is\_operator(char o)} vrací \texttt{true} když
-je symbol operátor. Nyní máme vytvořený symbol \texttt{csym}, ten
+symbol je operátor. Nyní máme vytvořený symbol \texttt{csym}, ten
 stačí nakopírovat na místo, které nám bylo dodáno zvenčí.
 
 Aktuální, symbol dostaneme voláním
 \verb+void lexa_get(atom *sym)+. Tím se analyzátor nikam nepřesouvá.
 Pořadí volání funkcí je následující: \texttt{init}, \texttt{next} a
-libovolně \texttt{get}.
-
-Často využívám dvě funkce z~modulu \texttt{tools.h}. První porovná
-dva řetězce
-\verb+bool equals(char *compared, const char *to, int stripit)+. Návratový
-typ \texttt{bool} pochází z~knihovny \texttt{stdbool.h}.  Poslední
-parametr \texttt{stripit} říká, zda je nutné oříznout počáteční a
-koncové bílé znaky z~řetězce \texttt{compared}.  Druhá je velmi
-jednoduchá funkce \verb+void die(const char *msg)+. Ta správně ukončí celý
-program a vypíše chybovou zprávu.
+libovolně volaný \texttt{get}.
 
 \subsection{Syntaktická analýza}
-Každý zpracovávaný vstup začíná funkcí \texttt{start()} z~modulu
-\textsf{synta}.  Výsledkem této funkce je buď 1 nebo 0. To značí, zda
-se má číst další vstup.  Zásadní funkce jsou
-\verb+void vyraz(char *out)+ a \verb+void komp(char *res)+. Podle
-gramatiky už je zjevné jaké vstupy zpracovávají.
+Zpracování výrazu se může nacházet ve třech stavech a to OK\_CODE,
+ERROR\_CODE a END\_CODE. OK\_CODE indikuje že vše proběhlo v pořádku,
+ERROR\_CODE indikuje že nastala, chyba. Při chybě je nahrán chybový
+řetězec do sdíleného místa \texttt{error\_message} a okamžitě ukončeno
+vykonávání aktuální funkce. Volající funkce je povinna předat chybu dále.
+
+Každý zpracovávaný vstup začíná funkcí \texttt{start()} stejně jak
+je naznačeno v gramatice na obrázku \ref{fig:gram}.
+
+V případě že jedná quote výraz, použiji funkce s prefixem
+\texttt{quote\_}. Od běžných funkcí se liší tím, že výraz nevyhodnocují
+a volají jen další \texttt{quote\_} podprogramy.
+
+V opačném případě se zavolá \texttt{list(char *res)}. Ten otestuje
+zda se jedná o ozávorkovaný výraz a vyhodnotí obsaženou funkci.
+Její vyhodnocení probíhá uvnitř seznamu, kde na prvním místě je
+funkce a pak její argumenty. Funkce může být také definovaná pomocí
+\textsf{defun}.
 
 Aritmetické výrazy byly dvojího typu. Buď aritmetické nebo
 booleovské. Každý aritmetický výraz je vyhodnocen zleva doprava
 postupným aplikováním operátoru na prvním místě. Musel jsem tedy na
 počátku zvolit neutrální prvek k~této operaci. Spočtená hodnota se
-ukládá do mezi-proměnné a nakonci tam zůstane výsledek.  Využil jsem
+ukládá do mezi-proměnné a nakonci tam zůstane výsledek. Využil jsem
 s~výhodou datový typ ukazatel na funkci.
 
 Každý operátor má svou vlastní funkci jako tato:
@@ -218,81 +230,21 @@ int addii(int a, int b)
 Podle toho jaký operátor funkce \texttt{vyraz(char *out)} najde,
 přiřadí příslušný ukazatel na funkci \verb+int (*op)(int, int)+.
 
-Samotné vyhodnocování je pouze tento krátký cyklus:
-\begin{lstlisting}
-lexa_next(&act);
-while (act.type == AT_VALUE || act.type == AT_IDENT ||
-          act.type == AT_LBRACKET)
-  {
-    if (type == ARIT)
-      {
-        komp(buf);
-        res = op(res, strtol(buf, NULL, 10));
-      }
-    else if (type == BOOL)
-      {
-        komp(buf);
-        bres &= op(res, strtol(buf, NULL, 10));
-      }
-    if (!lexa_next(&act))
-      break;
-  }
-\end{lstlisting}
-
-Zpracování jedné komponenty zabralo spoustu kódu.  Zjišťuje se o~jaký
-atom se jedná a tudíž je zde spoustu možností. Vyhodnocují se
-v~následujícím pořadí:
-\begin{itemize}
-\item číslo
-\item závorkovaný výraz
-\item identifikátor
-\begin{itemize}
-\item QUIT
-\item SET
-\item CAR
-\item CDR
-\item QUOTE
-\item HELP
-\item LIST
-\item NIL
-\item proměnná
-\end{itemize}
-
-\end{itemize}
-
-Číslem se rozumí triviální vstup čísla. Závorkovaný výraz zavolá
-rekurzivně výraz, nebo další komponentu. Jednotlivé identifikátory představují
+Číslem se rozumí triviální vstup čísla a závorkovaný výraz zavolá
+rekurzivně seznam. Jednotlivé identifikátory představují
 vnitřní příkazy interpretu až na poslední možnost, kdy se vyhledá
 proměnná v~seznamu uložených proměnných.
-
-Porovnávání názvu identifikátoru zajišťuje funkce \texttt{equals} a
-vyzkouším postupně všechny možné řetězce. Nastavení hodnoty proměnné
-vypadá jednoduše.
-
-\begin{lstlisting}
-if (equals(act.data, set, 0))
-  {
-    lexa_next(NULL);
-    komp(res);
-    var_n = (char *) malloc(strlen(res) + 1);
-    strcpy(var_n, res);
-
-    lexa_next(NULL);
-    komp(res);
-    var_v = (int *) malloc(sizeof(int));
-    *var_v = strtol(res, NULL, 10);
-	  
-    push(var_v, var_n);
-  }
-\end{lstlisting}
 
 Při změně hodnoty která v~seznamu již je, nepotřebuji najít a mazat
 starou hodnotu. Protože přidávám vždy na konec a prohledávám odzadu,
 starou hodnotu nikdy nenajdu. Do seznamu vkládám v~konstantním čase.
+Klíčem položky seznamu je její název a hodnotou je struktura
+\verb+member_t+ obsahující typ položky (funkce nebo proměnná)
+a jejich data.
 
 \section{Používání}
 K~překladu aplikace není třeba žádné zvláštní závislosti. Potřeba je
-pouze překladač jazyka C. Testován byl pouze překladač \textsf{GCC}.
+pouze překladač jazyka C. Testován byl překladač \textsf{GCC} a \textsf{Clang}.
 Přibalen je soubor \textsf{Makefile}. Po překladu pomocí programu
 \textsf{make} vznikne spouštěcí soubor \textsf{lisp}.
 
@@ -310,87 +262,49 @@ Výstup pak vypadá nějak takto:
 4
 [4]> (* x1 x2)
 8
-[5]> (list a x1 x2)
-(12 2 4)
+[5]> (== x1 x2)
+NIL
 \end{verbatim}
 
-Program skončí se zadáním \texttt{(quit)}. Pokud jste líní funguje i
-\texttt{quit} bez ozávorkování. Již jsem se zmínil během popisu funkce
-\texttt{komp()} jaké příkazy jsou podporovány. V~tabulce \ref{tab:prik}
-se můžete dočíst o~podporovaných příkazech.
+Program skončí se zadáním \texttt{(quit)}. V~tabulce \ref{tab:prik}
+jsou všechny podporované příkazy.
 
 \begin{table}
 \centering
 \begin{tabular}{|r|l|}
 \hline
 quote & argument nebude vyhodnocen\\ \hline
-list & argumenty budou vráceny jako seznam\\ \hline
-car & vrátí první prvek seznamu\\ \hline
-cdr & vrátí seznam bez prvního prvku\\ \hline
 set & uloží hodnotu proměnné\\ \hline
++ - * / & vypočte aritmetický výraz\\ \hline
+= != \textless{=} \textgreater{=} \& | & vyhodnotí booleovský výraz\\ \hline
+if & vyhodnotí podmínku\\ \hline
 quit & ukončí program\\ \hline
-help/about & vypíše informace o~autorovi a licenci\\
+help & vypíše informace o~autorovi a příkazech\\
 \hline
 \end{tabular}
 \caption{Podporované příkazy interpretu}
 \label{tab:prik}
 \end{table}
 
-Dále je jsou k~dispozici klasické operátory. Všechny operátory se
-zapisují prefixově. To znamená že prvním symbolem je operátor a pak
-následují všechny následující, na které se postupně aplikuje operace.
-Seznam podporovaných operátor je v~tabulce \ref{tab:op}.
-
-\begin{table}
-\centering
-\begin{tabular}{|r|l|}
-\hline
-+ & sečte vrátí výsledek\\ \hline
-- & vezme první a postupně odečítá\\ \hline
-* & vynásobí a vrátí výsledek\\ \hline
-/ & vemen první a postupně dělí\\ \hline
-= & testuje na rovnost všech\\ \hline
-/= & testuje na nerovnost\\ \hline
-\textgreater{} & testuje zda jsou prvky menší než předchozí\\ \hline
-\textless{} & testuje zda jsou prvky větší než předchozí\\ \hline
-\textgreater{=} & jako v~minulém, ale současně na rovnost\\ \hline
-\textless{=} & jako v~minulém, ale současně na rovnost\\ \hline
-\end{tabular}
-\caption{Podporované operátory}
-\label{tab:op}
-\end{table}
-
-Na závěr mám přichystané malé překvapení, protože umí odpovědět i
-na největší otázku. Zkuste napsat slavnou větu \texttt{What is the
-meaning of live, The Universe and Everything?}.
+Všechny operátory se zapisují prefixově. To znamená že prvním symbolem je operátor
+a pak následují všechny následující, na které se postupně aplikuje operace.
 
 \section{Závěr}
-Programování v~tomto jazyce má mnoho úskalí a snadno se stalo že něco
-prostě nešlo. Pod výsledek se ale rád podepíšu, protože se ukázaly i velké
-výhody tohoto jazyka, které jsem rád využil. Mohu alokovat kus paměti,
-který využívám po celou dobu běhu programu. Konec řetězce zajistím pouhým
-zapsáním nulového znaku. Ve vyšších jazycích je nemyslitelné, že dokonce
-nemusím ukládat do řetězce jen řetězce, ale i jakákoli jiná data, když vím
-že tam budou. Třeba zapsat strukturu do řetězce.
+Při vypracování jsem vycházel z původní semestrální práce pro předmět KIV/PC.
+Jedná se tedy o druhou generaci této aplikacem ve které jsem vylepšil nedokonalosti
+té předchozí. Vylepšil jsem jak lexikální část, datové struktury, čtení z
+různorodých vstupů a hlavně syntaktickou analýzu. Přepsal jsem prakticky
+celou aplikaci.
 
-Do budoucna by program vyžadoval přidat možnost rozšiřování na další
-příkazy. Veškeré mé funkce byly natvrdo nakódovány a přidat např.
-funkci na vrácení počtu prvků v~seznamu by vyžadovalo další zvětšování
-modulu \textsf{synta}. Ten by se měl rozdělit do několika podprogramů.
+Mezi přidanou funkcionalitou je především podpora funkcí, vyhodnocování podmínek,
+mnoho oprav v syntaxi a způsob ošetřování výjimek s výpisem příslušné chyby.
 
-Program vznikal na více místech. Byl to ArchLinux na procesoru x86 a
-pak Debian na Raspberry Pi. Vyzkoušel jsem tedy i funkčnost na tomto
-RISC procesoru s~architekturou ARMv6.
-
-Textové editory jsem používal 2. Byl to Emacs a Geany. Vyzkoušel jsem si i
-práci s~debuggerem \textsf{gdb} a vyhodnotil případné problémy v~programu
-\textsf{valgrind}. Dokumentace byla napsána v mém oblíbeném systému
-\CS\LaTeX{}. Protože jsem dělal minimálně na dvou počítačích, verzoval jsem
+Pro ladění jsem využil debugger \textsf{gdb} a vyhodnotil případné problémy v~programu
+\textsf{valgrind}. Dokumentace byla napsána v typografickém systému
+\LaTeX{}. Protože jsem dělal minimálně na dvou počítačích, verzoval jsem
 na GitHubu na adrese
 \url{https://github.com/qwertzdenek/AritmeticSolver}. Program bude dále
 veřejně dostupný pod licencí GNU GPL verze 3.
 
-\nocite{wiki:cpro}
-\nocite{pred:c}
 \bibliography{zdroje}
 \end{document}
