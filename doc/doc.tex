@@ -9,11 +9,8 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{url}
-\usepackage{natbib}
 
 \DeclareUrlCommand\url{\def\UrlLeft{<}\def\UrlRight{>} \urlstyle{tt}}
-
-\bibliographystyle{csplainnat}
 
 \lstset{language=C}
 
@@ -36,7 +33,7 @@ Datum:\> \today
 \tableofcontents
 
 \section{Zadání}
-Naprogramujte v jazyce C přenositelnou \emph{konzolovou aplikaci}, která
+Naprogramujte v~jazyce C přenositelnou \emph{konzolovou aplikaci}, která
 bude fungovat jako jednoduchý interpret podmnožiny jazyka LISP.
 Vstupem budou příkazy v~jazyce LISP. Výstupem pak výsledek vyhodnocení
 každého výrazu.
@@ -99,7 +96,7 @@ symbolu ARG, který následuje po funkci.
 
 \subsection{Lexikální analýza}
 Při návrhu programu jsem se řídil gramatikou, kterou jsem od
-základního návrhu rozšířil o podporu výpisu bez vyhodnocování (quote).
+základního návrhu rozšířil o~podporu výpisu bez vyhodnocování (quote).
 Její podoba je na obrázku \ref{fig:gram}.
 
 \begin{figure}
@@ -117,7 +114,7 @@ ARG\_SYM & LIST | var | num
 
 Oddělil jsem také neterminální symbol argumentu pro jeho opakované
 použití. Dovolené je hned jako počáteční symbol zavolat quote,
-ale jen v jeho zkrácené formě. Zbytek zůstává stejný. Oba symboly
+ale jen v~jeho zkrácené formě. Zbytek zůstává stejný. Oba symboly
 fce a var lze definovat pro nové symboly. Pro lexikální analýzu
 je důležité umět rozlišit funkci od proměnné. Lexikální analyzátor
 rozlišuje jen vnitřní funkce a ostatní symboly jsou jen proměnné.
@@ -143,9 +140,10 @@ AT\_UNKNOWN & neznámý symbol\\
 \label{tab:atom}
 \end{table}
 
-Zpracování vstupu probíhá sekvenčně a to za pomocí funkce \verb+lexa_next(atom *sym)+.
-V jednu chvíli mám uložen právě jeden symbol. V tomto ohledu se nijak
-neliší načítání ze standardního vstupu a ze souboru.
+Zpracování vstupu probíhá sekvenčně pomocí \verb+lexa_next(atom *sym)+.
+V~jednu chvíli mám uložen právě jeden symbol. V~tomto ohledu se nijak
+neliší načítání ze standardního vstupu a ze souboru. Jeden atom
+je uložen ve struktuře:
 
 \begin{lstlisting}
 typedef struct
@@ -166,7 +164,9 @@ podpoře rekurze. Obsahuje aktuální čtecí stream, poslední načtený symbol
 a znak. První symbol by neměl být prázdný a je to nějaký imaginární
 bílý znak.
 
-Pro zpracování symbolů používám několik pomocných funkcí:
+Pro zpracování symbolů používám několik pomocných funkcí k~tvorbě vnitřní
+struktury:
+
 \begin{description}
   \item[is\_operator] testuje existenci operátoru
   \item[write\_atom\_fce] atom funkce
@@ -176,11 +176,11 @@ Pro zpracování symbolů používám několik pomocných funkcí:
 \end{description}
 
 Samotná funkce \texttt{lexa\_next} zajišťuje čtení nových symbolů.
-Nejdříve se vypořádám s prázdnými znaky a pokud nejsem na konci,
+Nejdříve se vypořádám s~prázdnými znaky a pokud nejsem na konci,
 rozhodnu se podle znaku \texttt{lchar}. Platí obvyklé pravidlo
 že identifikátor nesmí začínat číslem, ale je dovolené třeba podtržítko.
-Nejdříve zjistím, zda se jedná o číslo s unárním operátorem, pak
-interní funkci a jinak se musí jednat o proměnnou. V případě
+Nejdříve zjistím, zda se jedná o~číslo s~unárním operátorem, pak
+interní funkci a jinak se musí jednat o~proměnnou. V~případě
 že symbol není rozpoznán, je vrácen jako neznámý.
 
 Funkce \texttt{is\_operator(char o)} vrací \texttt{true} když
@@ -194,20 +194,20 @@ libovolně volaný \texttt{get}.
 
 \subsection{Syntaktická analýza}
 Zpracování výrazu se může nacházet ve třech stavech a to OK\_CODE,
-ERROR\_CODE a END\_CODE. OK\_CODE indikuje že vše proběhlo v pořádku,
+ERROR\_CODE a END\_CODE. OK\_CODE indikuje že vše proběhlo v~pořádku,
 ERROR\_CODE indikuje že nastala, chyba. Při chybě je nahrán chybový
 řetězec do sdíleného místa \texttt{error\_message} a okamžitě ukončeno
 vykonávání aktuální funkce. Volající funkce je povinna předat chybu dále.
 
 Každý zpracovávaný vstup začíná funkcí \texttt{start()} stejně jak
-je naznačeno v gramatice na obrázku \ref{fig:gram}.
+je naznačeno v~gramatice na obrázku \ref{fig:gram}.
 
-V případě že jedná quote výraz, použiji funkce s prefixem
+V~případě že jedná quote výraz, použiji funkce s~prefixem
 \texttt{quote\_}. Od běžných funkcí se liší tím, že výraz nevyhodnocují
 a volají jen další \texttt{quote\_} podprogramy.
 
-V opačném případě se zavolá \texttt{list(char *res)}. Ten otestuje
-zda se jedná o ozávorkovaný výraz a vyhodnotí obsaženou funkci.
+V~opačném případě se zavolá \texttt{list(char *res)}. Ten otestuje
+zda se jedná o~závorkovaný výraz a vyhodnotí obsaženou funkci.
 Její vyhodnocení probíhá uvnitř seznamu, kde na prvním místě je
 funkce a pak její argumenty. Funkce může být také definovaná pomocí
 \textsf{defun}.
@@ -216,7 +216,7 @@ Aritmetické výrazy byly dvojího typu. Buď aritmetické nebo
 booleovské. Každý aritmetický výraz je vyhodnocen zleva doprava
 postupným aplikováním operátoru na prvním místě. Musel jsem tedy na
 počátku zvolit neutrální prvek k~této operaci. Spočtená hodnota se
-ukládá do mezi-proměnné a nakonci tam zůstane výsledek. Využil jsem
+ukládá do mezi-proměnné a na konci tam zůstane výsledek. Využil jsem
 s~výhodou datový typ ukazatel na funkci.
 
 Každý operátor má svou vlastní funkci jako tato:
@@ -254,20 +254,28 @@ uživatele. Každý příkaz oddělí uživatel stisknutím klávesy ENTER.
 
 Výstup pak vypadá nějak takto:
 \begin{verbatim}
-[1]> (set 'a 12)
-12
+[1]> (car (list (list 1 2 3) 4 5))
+(1 2 3)
 [2]> (set 'x1 2)
 2
 [3]> (set 'x2 (* x1 2))
 4
-[4]> (* x1 x2)
+[4]> (defun mul 2 (* #0 #1))
+(* #0 #1)
+[5]> (mul (list x1 x2))
 8
-[5]> (== x1 x2)
-NIL
 \end{verbatim}
 
 Program skončí se zadáním \texttt{(quit)}. V~tabulce \ref{tab:prik}
-jsou všechny podporované příkazy.
+jsou všechny podporované příkazy. Vytvořit jde také komplexnější příkaz
+jako je třeba definice faktoriálu nebo Fibonacciho posloupnosti:
+\begin{verbatim}
+(defun fact 1 (if (>= #0 2)
+  (* #0 (fact (- #0 1))) (print 1)))
+
+(defun fib 1  (if (>= #0 3) (+ (fib (- #0 1))
+  (fib (- #0 2))) (print 1)))
+\end{verbatim}
 
 \begin{table}
 \centering
@@ -278,6 +286,10 @@ set & uloží hodnotu proměnné\\ \hline
 + - * / & vypočte aritmetický výraz\\ \hline
 = != \textless{=} \textgreater{=} \& | & vyhodnotí booleovský výraz\\ \hline
 if & vyhodnotí podmínku\\ \hline
+car & vrátí první prvek seznamu\\ \hline
+cdr & vrátí všechny prvky seznamu bez prvního\\ \hline
+list & vrátí seznam\\ \hline
+defun & definuje funkci (defun \textbf{jméno} \textbf{počet-par} \textbf{tělo})\\ \hline
 quit & ukončí program\\ \hline
 help & vypíše informace o~autorovi a příkazech\\
 \hline
@@ -288,23 +300,25 @@ help & vypíše informace o~autorovi a příkazech\\
 
 Všechny operátory se zapisují prefixově. To znamená že prvním symbolem je operátor
 a pak následují všechny následující, na které se postupně aplikuje operace.
+Odlišně jsem pojal předávání argumentů. Jedná se totiž o~konstantní předávání
+hodnotou. Při definici funkce zadá uživatel počet parametrů a do kódu
+funkce zapisuje placeholder podle pořadí v~seznamu, který předá při volání.
 
 \section{Závěr}
-Při vypracování jsem vycházel z původní semestrální práce pro předmět KIV/PC.
-Jedná se tedy o druhou generaci této aplikacem ve které jsem vylepšil nedokonalosti
-té předchozí. Vylepšil jsem jak lexikální část, datové struktury, čtení z
-různorodých vstupů a hlavně syntaktickou analýzu. Přepsal jsem prakticky
+Při vypracování jsem vycházel z~původní semestrální práce pro předmět KIV/PC.
+Jedná se tedy o~druhou generaci této aplikace ve které jsem vylepšil nedokonalosti
+té předchozí. Vylepšil jsem jak lexikální část, datové struktury, čtení
+z~různorodých vstupů a hlavně syntaktickou analýzu. Přepsal jsem prakticky
 celou aplikaci.
 
 Mezi přidanou funkcionalitou je především podpora funkcí, vyhodnocování podmínek,
-mnoho oprav v syntaxi a způsob ošetřování výjimek s výpisem příslušné chyby.
+mnoho oprav v~syntaxi a způsob ošetřování výjimek s~výpisem příslušné chyby.
 
 Pro ladění jsem využil debugger \textsf{gdb} a vyhodnotil případné problémy v~programu
-\textsf{valgrind}. Dokumentace byla napsána v typografickém systému
+\textsf{valgrind}. Dokumentace byla napsána v~typografickém systému
 \LaTeX{}. Protože jsem dělal minimálně na dvou počítačích, verzoval jsem
 na GitHubu na adrese
 \url{https://github.com/qwertzdenek/AritmeticSolver}. Program bude dále
 veřejně dostupný pod licencí GNU GPL verze 3.
 
-\bibliography{zdroje}
 \end{document}

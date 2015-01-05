@@ -7,4 +7,5 @@
 (* (fact (list a)) a)
 (* a a)
 (fib (list 10))
+(car (list (list 1 2 3) 4 5))
 

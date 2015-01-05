@@ -86,8 +86,7 @@ int pop(member_t **p_value, char **p_name)
     return 1;
 }
 
-// nastavý začátek seznamu. Použít před začátkem
-// každého průchodu.
+// Sets iterator to the beggining. Use it befere every search.
 void begin()
 {
     current = top;

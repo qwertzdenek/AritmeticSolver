@@ -44,7 +44,7 @@ void print_error()
     fprintf(stderr, error_message);
 }
 
-// Pro čtení ze souboru
+// reads whole file
 void readfile(FILE *f, char *l)
 {
     int c;

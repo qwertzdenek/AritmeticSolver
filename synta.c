@@ -44,14 +44,33 @@ int arg(char *res);
 int arg_sym(char *res);
 int skip_list();
 
+#ifdef __MINGW32__
+FILE *memopen(void *buf, size_t size)
+{
+    FILE *tmpf = tmpfile();
+    if (tmpf == NULL)
+    {
+        printf("cannot open tmp file\n");
+        return NULL;
+    }
+    fwrite(buf, size, 1, tmpf);
+    rewind(tmpf);
+    return tmpf;
+}
+#endif
+
 char *help_text =
-    "LISP language interpretter. Written by Zdeněk Janeček in years 2012-2014\n"\
+    "LISP language interpretter. Written by Zdenek Janecek in years 2012-2014\n"\
     "Functions:\n"\
     "  aritmetic -> + - * /\n"\
     "  boolean -> == = != <= >= & |\n"\
     "  quote - do not evaluate and print\n"\
     "  set - set variable (set 'a 2)\n"\
     "  if - branch condition\n"\
+    "  car - returns first element of the list\n"\
+    "  cdr - returns rest of the list\n"\
+    "  list - creates list\n"\
+    "  defun - defines user function (defun name #param body)\n"\
     "  help - print this message\n"\
     "  quit - exit program\n";
 
@@ -132,7 +151,11 @@ int car_list(char *res)
     else if (type == ERROR_CODE)
         return ERROR_CODE;
 
+    #ifdef __MINGW32__
+    stream = memopen(res, strlen(res));
+    #else
     stream = fmemopen(res, strlen(res), "r");
+    #endif
     state.stream = stream;
     state.lchar = ' '; // initial character
     state_backup = lexa_init(&state);
@@ -171,7 +194,11 @@ int cdr_list(char *res)
     else if (type == ERROR_CODE)
         return ERROR_CODE;
 
+    #ifdef __MINGW32__
+    stream = memopen(res, strlen(res));
+    #else
     stream = fmemopen(res, strlen(res), "r");
+    #endif
     state.stream = stream;
     state.lchar = ' '; // initial character
     state_backup = lexa_init(&state);
@@ -197,7 +224,7 @@ int cdr_list(char *res)
     return OK_CODE;
 }
 
-// přeskočí vnořené seznamy
+// skip nested lists
 int skip_list()
 {
     atom act;
@@ -310,7 +337,11 @@ int get_num_list(int **res, int *cres)
     if (arg(tmp) == ERROR_CODE)
         return ERROR_CODE;
 
+    #ifdef __MINGW32__
+    stream = memopen(tmp, strlen(tmp));
+    #else
     stream = fmemopen(tmp, strlen(tmp), "r");
+    #endif
     state.stream = stream;
     state.lchar = ' '; // initial character
     state_backup = lexa_init(&state);
@@ -377,7 +408,7 @@ int quote_list(char *res)
     return OK_CODE;
 }
 
-// zpracuje jeden quote argument
+// one quoted argument
 int quote_arg_sym(char *res)
 {
     atom act;
@@ -407,7 +438,7 @@ int quote_arg_sym(char *res)
     return OK_CODE;
 }
 
-// argument funkce
+// function argument
 int arg_sym(char *res)
 {
     member_t mem;
@@ -465,7 +496,7 @@ int arg(char *res)
     return OK_CODE;
 }
 
-// uvnitř seznamu
+// inside list
 int list_in(char *res)
 {
     atom act;
@@ -512,7 +543,11 @@ int list_in(char *res)
         replnph(var_n, mem.func.body, args, cargs);
         free(args);
 
+        #ifdef __MINGW32__
+        stream = memopen(var_n, strlen(var_n));
+        #else
         stream = fmemopen(var_n, strlen(var_n), "r");
+        #endif
         state.stream = stream;
         state.lchar = ' '; // initial character
         state_backup = lexa_init(&state);
@@ -809,7 +844,7 @@ int list(char *out)
         return OK_CODE;
 }
 
-// vyhodnotí seznam nebo squote
+// resolves list or short quote
 int start()
 {
     atom act;
