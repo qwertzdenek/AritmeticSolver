@@ -45,9 +45,11 @@ int arg_sym(char *res);
 int skip_list();
 
 #ifdef __MINGW32__
-FILE *memopen(void *buf, size_t size)
+FILE *memopen(void *buf, size_t size, char *name)
 {
-    FILE *tmpf = tmpfile();
+    tmpnam (name);
+    FILE *tmpf = fopen(name, "wb+");
+
     if (tmpf == NULL)
     {
         printf("cannot open tmp file\n");
@@ -142,6 +144,9 @@ int car_list(char *res)
     FILE *stream;
     lexa_state state;
     lexa_state state_backup;
+    #ifdef __MINGW32__
+    char name[L_tmpnam];
+    #endif // __MINGW32__
 
     lexa_get(&act);
 
@@ -152,7 +157,7 @@ int car_list(char *res)
         return ERROR_CODE;
 
     #ifdef __MINGW32__
-    stream = memopen(res, strlen(res));
+    stream = memopen(res, strlen(res), name);
     #else
     stream = fmemopen(res, strlen(res), "r");
     #endif
@@ -172,7 +177,11 @@ int car_list(char *res)
     if (arg_sym(res) == END_CODE)
         strcpy(res, nil);
 
+    #ifdef __MINGW32__
+    remove(name);
+    #else
     fclose(stream);
+    #endif
     lexa_init(&state_backup);
 
     return OK_CODE;
@@ -185,6 +194,9 @@ int cdr_list(char *res)
     FILE *stream;
     lexa_state state;
     lexa_state state_backup;
+    #ifdef __MINGW32__
+    char name[L_tmpnam];
+    #endif // __MINGW32__
 
     lexa_get(&act);
 
@@ -195,7 +207,7 @@ int cdr_list(char *res)
         return ERROR_CODE;
 
     #ifdef __MINGW32__
-    stream = memopen(res, strlen(res));
+    stream = memopen(res, strlen(res), name);
     #else
     stream = fmemopen(res, strlen(res), "r");
     #endif
@@ -217,10 +229,13 @@ int cdr_list(char *res)
     if (quote_list(res) == END_CODE)
         strcpy(res, nil);
 
+    #ifdef __MINGW32__
+    remove(name);
+    #else
     fclose(stream);
+    #endif
     lexa_init(&state_backup);
 
-//    lexa_next(NULL);
     return OK_CODE;
 }
 
@@ -331,6 +346,9 @@ int get_num_list(int **res, int *cres)
     FILE *stream;
     lexa_state state;
     lexa_state state_backup;
+    #ifdef __MINGW32__
+    char name[L_tmpnam];
+    #endif // __MINGW32__
 
     *cres = 0;
 
@@ -338,7 +356,7 @@ int get_num_list(int **res, int *cres)
         return ERROR_CODE;
 
     #ifdef __MINGW32__
-    stream = memopen(tmp, strlen(tmp));
+    stream = memopen(tmp, strlen(tmp), name);
     #else
     stream = fmemopen(tmp, strlen(tmp), "r");
     #endif
@@ -373,7 +391,11 @@ int get_num_list(int **res, int *cres)
         free(mem);
     }
 
+    #ifdef __MINGW32__
+    remove(name);
+    #else
     fclose(stream);
+    #endif
     lexa_init(&state_backup);
 
     return OK_CODE;
@@ -515,6 +537,9 @@ int list_in(char *res)
     FILE *stream;
     lexa_state state;
     lexa_state state_backup;
+    #ifdef __MINGW32__
+    char name[L_tmpnam];
+    #endif // __MINGW32__
 
     lexa_get(&act);
 
@@ -540,11 +565,15 @@ int list_in(char *res)
         }
 
         var_n = (char *) malloc(1024); // function will not be longer than kB, will be?
-        replnph(var_n, mem.func.body, args, cargs);
+        if (replnph(var_n, mem.func.body, args, cargs) == ERROR_CODE)
+        {
+            free(args);
+            return ERROR_CODE;
+        }
         free(args);
 
         #ifdef __MINGW32__
-        stream = memopen(var_n, strlen(var_n));
+        stream = memopen(var_n, strlen(var_n), name);
         #else
         stream = fmemopen(var_n, strlen(var_n), "r");
         #endif
@@ -555,7 +584,13 @@ int list_in(char *res)
         // call function
         lexa_next(NULL);
         type = list(res);
+
+        #ifdef __MINGW32__
+        remove(name);
+        #else
         fclose(stream);
+        #endif
+
         lexa_init(&state_backup);
         free(var_n);
         lexa_next(NULL);
@@ -717,6 +752,9 @@ int list_in(char *res)
         lexa_next(&act);
         quote_arg_sym(res);
         lexa_next(NULL);
+
+        if (placeholder_test(res, act.value) == ERROR_CODE)
+            return ERROR_CODE;
 
         strcpy(func.body, res);
         var_v = (member_t *) malloc(sizeof(member_t));

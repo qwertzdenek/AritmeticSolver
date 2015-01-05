@@ -25,5 +25,6 @@
 void die(const char *msg);
 char *supper(char *upper_str);
 int replnph(char *dest, char *src, int *args, int cargs);
+int placeholder_test(char *str, int cargs);
 
 #endif

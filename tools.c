@@ -83,3 +83,29 @@ int replnph(char *dest, char *src, int *args, int cargs)
     *destptr = 0;
     return OK_CODE;
 }
+
+int placeholder_test(char *str, int cargs)
+{
+    char *srcptr = str;
+    int value;
+
+    while (*srcptr != 0)
+    {
+        if (*srcptr != '#')
+            srcptr++;
+        else
+        {
+            srcptr++; // skip #
+            value = (int) strtol(srcptr, &srcptr, 10); // read value
+            if (value < cargs)
+                continue;
+            else
+            {
+                sprintf(error_message, "invalid variable placeholder #%d in %s\n", value, str);
+                return ERROR_CODE;
+            }
+        }
+    }
+
+    return OK_CODE;
+}
